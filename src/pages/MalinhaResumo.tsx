@@ -67,6 +67,7 @@ export default function MalinhaResumo() {
             <p>📱 {malinha.clientPhone}</p>
             <p>📋 {malinha.clientCpf}</p>
             <p>📦 {malinha.products.length} {malinha.products.length === 1 ? 'peça' : 'peças'}</p>
+            <p className="text-foreground font-medium">💰 Total: R$ {malinha.products.reduce((sum, p) => sum + p.price * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
 
@@ -79,7 +80,7 @@ export default function MalinhaResumo() {
                 <img src={p.photoUrl} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
                 <div>
                   <p className="text-sm font-medium">{p.code}</p>
-                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity}</p>
+                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {p.price.toFixed(2).replace('.', ',')}</p>
                 </div>
                 {p.status === 'accepted' && <Badge className="ml-auto bg-success text-success-foreground text-xs">Aceita</Badge>}
                 {p.status === 'rejected' && <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
