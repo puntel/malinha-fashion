@@ -98,6 +98,7 @@ export default function ClienteView() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground">{p.code}</p>
                   <p className="text-sm text-muted-foreground">Tamanho: {p.size}</p>
+                  <p className="text-sm font-medium text-foreground">R$ {p.price.toFixed(2).replace('.', ',')}</p>
                   {p.clientNote && (
                     <p className="text-xs text-primary mt-1 italic">"{p.clientNote}"</p>
                   )}
@@ -154,6 +155,12 @@ export default function ClienteView() {
       {/* Fixed bottom */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-card/90 backdrop-blur-md p-4">
         <div className="mx-auto max-w-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Total selecionado:</span>
+            <span className="font-display font-semibold text-foreground">
+              R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + p.price * p.quantity, 0).toFixed(2).replace('.', ',')}
+            </span>
+          </div>
           <Button onClick={handleFinalize} className="w-full" size="lg">
             Finalizar Minhas Escolhas
           </Button>

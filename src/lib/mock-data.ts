@@ -5,6 +5,7 @@ export interface Product {
   code: string;
   size: string;
   quantity: number;
+  price: number;
   photoUrl: string;
   status: ProductStatus;
   clientNote?: string;
@@ -40,9 +41,9 @@ const initialData: MalinhaStore = {
       status: 'Enviada',
       sellerName: 'Ana Beatriz',
       products: [
-        { id: 'p1', code: 'VT-001', size: 'M', quantity: 1, photoUrl: '/placeholder.svg', status: 'pending' },
-        { id: 'p2', code: 'BL-042', size: 'P', quantity: 1, photoUrl: '/placeholder.svg', status: 'pending' },
-        { id: 'p3', code: 'SK-018', size: 'G', quantity: 1, photoUrl: '/placeholder.svg', status: 'pending' },
+        { id: 'p1', code: 'VT-001', size: 'M', quantity: 1, price: 189.90, photoUrl: '/placeholder.svg', status: 'pending' },
+        { id: 'p2', code: 'BL-042', size: 'P', quantity: 1, price: 129.90, photoUrl: '/placeholder.svg', status: 'pending' },
+        { id: 'p3', code: 'SK-018', size: 'G', quantity: 1, price: 219.90, photoUrl: '/placeholder.svg', status: 'pending' },
       ],
     },
     {
@@ -54,8 +55,8 @@ const initialData: MalinhaStore = {
       status: 'Aguardando Retorno',
       sellerName: 'Ana Beatriz',
       products: [
-        { id: 'p4', code: 'DR-055', size: 'M', quantity: 1, photoUrl: '/placeholder.svg', status: 'pending' },
-        { id: 'p5', code: 'JK-012', size: 'P', quantity: 1, photoUrl: '/placeholder.svg', status: 'pending' },
+        { id: 'p4', code: 'DR-055', size: 'M', quantity: 1, price: 349.90, photoUrl: '/placeholder.svg', status: 'pending' },
+        { id: 'p5', code: 'JK-012', size: 'P', quantity: 1, price: 259.90, photoUrl: '/placeholder.svg', status: 'pending' },
       ],
     },
     {
@@ -67,8 +68,8 @@ const initialData: MalinhaStore = {
       status: 'Finalizada',
       sellerName: 'Ana Beatriz',
       products: [
-        { id: 'p6', code: 'TP-033', size: 'G', quantity: 1, photoUrl: '/placeholder.svg', status: 'accepted' },
-        { id: 'p7', code: 'PT-021', size: 'M', quantity: 1, photoUrl: '/placeholder.svg', status: 'rejected' },
+        { id: 'p6', code: 'TP-033', size: 'G', quantity: 1, price: 159.90, photoUrl: '/placeholder.svg', status: 'accepted' },
+        { id: 'p7', code: 'PT-021', size: 'M', quantity: 1, price: 199.90, photoUrl: '/placeholder.svg', status: 'rejected' },
       ],
     },
   ],

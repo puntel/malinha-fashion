@@ -21,6 +21,7 @@ export default function NovaMalinhaProdutos() {
   const [code, setCode] = useState('');
   const [size, setSize] = useState('');
   const [qty, setQty] = useState('1');
+  const [price, setPrice] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const canAdd = code.trim() && size;
@@ -32,6 +33,7 @@ export default function NovaMalinhaProdutos() {
       code: code.trim().toUpperCase(),
       size,
       quantity: parseInt(qty) || 1,
+      price: parseFloat(price.replace(',', '.')) || 0,
       photoUrl: photoPreview || '/placeholder.svg',
       status: 'pending',
     };
@@ -39,6 +41,7 @@ export default function NovaMalinhaProdutos() {
     setCode('');
     setSize('');
     setQty('1');
+    setPrice('');
     setPhotoPreview(null);
   };
 
@@ -94,19 +97,23 @@ export default function NovaMalinhaProdutos() {
             <Label>Código do produto</Label>
             <Input placeholder="Ex: VT-001" value={code} onChange={e => setCode(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>Tamanho</Label>
               <Select value={size} onValueChange={setSize}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Tam" /></SelectTrigger>
                 <SelectContent>
                   {SIZES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Quantidade</Label>
+              <Label>Qtd</Label>
               <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Preço (R$)</Label>
+              <Input placeholder="0,00" value={price} onChange={e => setPrice(e.target.value)} inputMode="decimal" />
             </div>
           </div>
 
@@ -141,7 +148,7 @@ export default function NovaMalinhaProdutos() {
                   <img src={p.photoUrl} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{p.code}</p>
-                    <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity}</p>
+                    <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {p.price.toFixed(2).replace('.', ',')}</p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => handleRemove(p.id)} className="shrink-0 text-destructive">
                     <Trash2 className="h-4 w-4" />
