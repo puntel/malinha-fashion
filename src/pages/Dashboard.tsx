@@ -8,7 +8,8 @@ import type { Malinha } from '@/lib/mock-data';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
-  'Aguardando Retorno': 'bg-secondary text-secondary-foreground',
+  'Em aberto': 'bg-primary/15 text-primary',
+  'Pedido realizado': 'bg-secondary text-secondary-foreground',
   'Finalizada': 'bg-success text-success-foreground',
 };
 

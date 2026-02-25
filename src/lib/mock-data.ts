@@ -11,15 +11,18 @@ export interface Product {
   clientNote?: string;
 }
 
+export type MalinhaStatus = 'Enviada' | 'Em aberto' | 'Pedido realizado' | 'Finalizada';
+
 export interface Malinha {
   id: string;
   clientName: string;
   clientCpf: string;
   clientPhone: string;
   createdAt: string;
-  status: 'Enviada' | 'Aguardando Retorno' | 'Finalizada';
+  status: MalinhaStatus;
   products: Product[];
   sellerName: string;
+  sellerNote?: string;
 }
 
 export type MalinhaStore = {
@@ -38,7 +41,7 @@ const initialData: MalinhaStore = {
       clientCpf: '123.456.789-00',
       clientPhone: '(11) 99876-5432',
       createdAt: '2026-02-20',
-      status: 'Enviada',
+      status: 'Enviada' as MalinhaStatus,
       sellerName: 'Ana Beatriz',
       products: [
         { id: 'p1', code: 'VT-001', size: 'M', quantity: 1, price: 189.90, photoUrl: '/placeholder.svg', status: 'pending' },
@@ -52,7 +55,7 @@ const initialData: MalinhaStore = {
       clientCpf: '987.654.321-00',
       clientPhone: '(21) 98765-1234',
       createdAt: '2026-02-18',
-      status: 'Aguardando Retorno',
+      status: 'Em aberto' as MalinhaStatus,
       sellerName: 'Ana Beatriz',
       products: [
         { id: 'p4', code: 'DR-055', size: 'M', quantity: 1, price: 349.90, photoUrl: '/placeholder.svg', status: 'pending' },
@@ -65,7 +68,7 @@ const initialData: MalinhaStore = {
       clientCpf: '456.789.123-00',
       clientPhone: '(31) 97654-3210',
       createdAt: '2026-02-15',
-      status: 'Finalizada',
+      status: 'Finalizada' as MalinhaStatus,
       sellerName: 'Ana Beatriz',
       products: [
         { id: 'p6', code: 'TP-033', size: 'G', quantity: 1, price: 159.90, photoUrl: '/placeholder.svg', status: 'accepted' },
