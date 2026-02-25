@@ -14,7 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      malinha_products: {
+        Row: {
+          client_note: string | null
+          code: string
+          created_at: string
+          id: string
+          malinha_id: string
+          photo_url: string | null
+          price: number
+          quantity: number
+          size: string
+          status: Database["public"]["Enums"]["product_status"]
+        }
+        Insert: {
+          client_note?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          malinha_id: string
+          photo_url?: string | null
+          price?: number
+          quantity?: number
+          size: string
+          status?: Database["public"]["Enums"]["product_status"]
+        }
+        Update: {
+          client_note?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          malinha_id?: string
+          photo_url?: string | null
+          price?: number
+          quantity?: number
+          size?: string
+          status?: Database["public"]["Enums"]["product_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "malinha_products_malinha_id_fkey"
+            columns: ["malinha_id"]
+            isOneToOne: false
+            referencedRelation: "malinhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      malinhas: {
+        Row: {
+          client_cpf: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          id: string
+          seller_name: string
+          seller_note: string | null
+          status: Database["public"]["Enums"]["malinha_status"]
+          updated_at: string
+        }
+        Insert: {
+          client_cpf: string
+          client_name: string
+          client_phone: string
+          created_at?: string
+          id?: string
+          seller_name?: string
+          seller_note?: string | null
+          status?: Database["public"]["Enums"]["malinha_status"]
+          updated_at?: string
+        }
+        Update: {
+          client_cpf?: string
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          id?: string
+          seller_name?: string
+          seller_note?: string | null
+          status?: Database["public"]["Enums"]["malinha_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +105,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      malinha_status:
+        | "Enviada"
+        | "Em aberto"
+        | "Pedido realizado"
+        | "Finalizada"
+      product_status: "pending" | "accepted" | "rejected" | "edited"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +237,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      malinha_status: [
+        "Enviada",
+        "Em aberto",
+        "Pedido realizado",
+        "Finalizada",
+      ],
+      product_status: ["pending", "accepted", "rejected", "edited"],
+    },
   },
 } as const

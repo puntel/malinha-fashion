@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getMalinhaById, updateMalinha } from '@/lib/mock-data';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchMalinhaById, updateMalinhaStatus } from '@/lib/api';
 import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
@@ -18,9 +19,29 @@ const statusColors: Record<string, string> = {
 export default function MalinhaResumo() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [malinha, setMalinha] = useState(() => getMalinhaById(id || ''));
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
-  const [sellerNote, setSellerNote] = useState(malinha?.sellerNote || '');
+  const [sellerNote, setSellerNote] = useState('');
+  const [finalizing, setFinalizing] = useState(false);
+
+  const { data: malinha, isLoading } = useQuery({
+    queryKey: ['malinha', id],
+    queryFn: () => fetchMalinhaById(id || ''),
+    enabled: !!id,
+  });
+
+  // Sync sellerNote when data loads
+  useState(() => {
+    if (malinha?.seller_note && !sellerNote) setSellerNote(malinha.seller_note);
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!malinha) {
     return (
@@ -30,6 +51,7 @@ export default function MalinhaResumo() {
     );
   }
 
+  const products = malinha.malinha_products || [];
   const link = `${window.location.origin}/malinha/${malinha.id}`;
 
   const handleCopy = async () => {
@@ -40,9 +62,23 @@ export default function MalinhaResumo() {
   };
 
   const handleWhatsApp = () => {
-    const msg = encodeURIComponent(`Olá ${malinha.clientName}! 🛍️\n\nSua malinha está pronta! Confira as peças que separei para você:\n${link}`);
-    const phone = malinha.clientPhone.replace(/\D/g, '');
+    const msg = encodeURIComponent(`Olá ${malinha.client_name}! 🛍️\n\nSua malinha está pronta! Confira as peças que separei para você:\n${link}`);
+    const phone = malinha.client_phone.replace(/\D/g, '');
     window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
+  };
+
+  const handleFinalize = async () => {
+    setFinalizing(true);
+    try {
+      await updateMalinhaStatus(malinha.id, 'Finalizada', sellerNote);
+      queryClient.invalidateQueries({ queryKey: ['malinha', id] });
+      queryClient.invalidateQueries({ queryKey: ['malinhas'] });
+      toast.success('Malinha finalizada!');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   return (
@@ -54,7 +90,7 @@ export default function MalinhaResumo() {
           </Button>
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Resumo</p>
-            <h1 className="font-display text-lg font-semibold">Malinha de {malinha.clientName.split(' ')[0]}</h1>
+            <h1 className="font-display text-lg font-semibold">Malinha de {malinha.client_name.split(' ')[0]}</h1>
           </div>
         </div>
       </header>
@@ -63,14 +99,14 @@ export default function MalinhaResumo() {
         {/* Summary card */}
         <div className="rounded-xl border bg-card p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-base font-medium">{malinha.clientName}</h2>
+            <h2 className="font-display text-base font-medium">{malinha.client_name}</h2>
             <Badge className={statusColors[malinha.status]}>{malinha.status}</Badge>
           </div>
           <div className="text-sm text-muted-foreground space-y-1">
-            <p>📱 {malinha.clientPhone}</p>
-            <p>📋 {malinha.clientCpf}</p>
-            <p>📦 {malinha.products.length} {malinha.products.length === 1 ? 'peça' : 'peças'}</p>
-            <p className="text-foreground font-medium">💰 Total: R$ {malinha.products.reduce((sum, p) => sum + p.price * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
+            <p>📱 {malinha.client_phone}</p>
+            <p>📋 {malinha.client_cpf}</p>
+            <p>📦 {products.length} {products.length === 1 ? 'peça' : 'peças'}</p>
+            <p className="text-foreground font-medium">💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
 
@@ -78,12 +114,12 @@ export default function MalinhaResumo() {
         <div>
           <h3 className="font-display text-sm font-medium mb-3">Peças</h3>
           <div className="space-y-2">
-            {malinha.products.map(p => (
+            {products.map(p => (
               <div key={p.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
-                <img src={p.photoUrl} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
+                <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
                 <div>
                   <p className="text-sm font-medium">{p.code}</p>
-                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {p.price.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
                 </div>
                 {p.status === 'accepted' && <Badge className="ml-auto bg-success text-success-foreground text-xs">Aceita</Badge>}
                 {p.status === 'rejected' && <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
@@ -93,7 +129,7 @@ export default function MalinhaResumo() {
           </div>
         </div>
 
-        {/* Seller observation (visible when Pedido realizado or Finalizada) */}
+        {/* Seller observation */}
         {(malinha.status === 'Pedido realizado' || malinha.status === 'Finalizada') && (
           <div className="rounded-xl border bg-card p-5 space-y-3">
             <h3 className="font-display text-sm font-medium">Observações da Vendedora</h3>
@@ -106,16 +142,8 @@ export default function MalinhaResumo() {
               disabled={malinha.status === 'Finalizada'}
             />
             {malinha.status === 'Pedido realizado' && (
-              <Button
-                onClick={() => {
-                  updateMalinha(malinha.id, { status: 'Finalizada', sellerNote });
-                  setMalinha(getMalinhaById(malinha.id));
-                  toast.success('Malinha finalizada!');
-                }}
-                className="w-full gap-2"
-                variant="default"
-                size="lg"
-              >
+              <Button onClick={handleFinalize} className="w-full gap-2" variant="default" size="lg" disabled={finalizing}>
+                {finalizing && <Loader2 className="h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="h-5 w-5" />
                 Finalizar Malinha
               </Button>
