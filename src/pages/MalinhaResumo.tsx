@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, MessageCircle, Share2 } from 'lucide-react';
+import { ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getMalinhaById } from '@/lib/mock-data';
+import { getMalinhaById, updateMalinha } from '@/lib/mock-data';
 import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
-  'Aguardando Retorno': 'bg-secondary text-secondary-foreground',
+  'Em aberto': 'bg-primary/15 text-primary',
+  'Pedido realizado': 'bg-secondary text-secondary-foreground',
   'Finalizada': 'bg-success text-success-foreground',
 };
 
 export default function MalinhaResumo() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const malinha = getMalinhaById(id || '');
+  const [malinha, setMalinha] = useState(() => getMalinhaById(id || ''));
   const [copied, setCopied] = useState(false);
+  const [sellerNote, setSellerNote] = useState(malinha?.sellerNote || '');
 
   if (!malinha) {
     return (
@@ -89,6 +92,36 @@ export default function MalinhaResumo() {
             ))}
           </div>
         </div>
+
+        {/* Seller observation (visible when Pedido realizado or Finalizada) */}
+        {(malinha.status === 'Pedido realizado' || malinha.status === 'Finalizada') && (
+          <div className="rounded-xl border bg-card p-5 space-y-3">
+            <h3 className="font-display text-sm font-medium">Observações da Vendedora</h3>
+            <Textarea
+              placeholder="Ex: Fechou 3 peças, pagamento no cartão 2x. Devolver 2 peças na sexta."
+              value={sellerNote}
+              onChange={e => setSellerNote(e.target.value)}
+              rows={3}
+              className="text-sm"
+              disabled={malinha.status === 'Finalizada'}
+            />
+            {malinha.status === 'Pedido realizado' && (
+              <Button
+                onClick={() => {
+                  updateMalinha(malinha.id, { status: 'Finalizada', sellerNote });
+                  setMalinha(getMalinhaById(malinha.id));
+                  toast.success('Malinha finalizada!');
+                }}
+                className="w-full gap-2"
+                variant="default"
+                size="lg"
+              >
+                <CheckCircle2 className="h-5 w-5" />
+                Finalizar Malinha
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Share section */}
         <div className="rounded-xl border bg-card p-5 space-y-4">

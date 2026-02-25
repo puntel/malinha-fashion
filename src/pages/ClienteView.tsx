@@ -14,6 +14,13 @@ export default function ClienteView() {
   const [editNote, setEditNote] = useState('');
   const [finalized, setFinalized] = useState(false);
 
+  // Mark as "Em aberto" when client opens the link
+  useState(() => {
+    if (malinha && malinha.status === 'Enviada') {
+      updateMalinha(malinha.id, { status: 'Em aberto' });
+    }
+  });
+
   if (!malinha) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -42,7 +49,7 @@ export default function ClienteView() {
 
   const handleFinalize = () => {
     updateMalinha(malinha.id, {
-      status: 'Finalizada',
+      status: 'Pedido realizado',
       products: products,
     });
     setFinalized(true);
