@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      loja_members: {
+        Row: {
+          created_at: string
+          id: string
+          loja_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          loja_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          loja_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loja_members_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lojas: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       malinha_products: {
         Row: {
           client_note: string | null
@@ -72,6 +131,7 @@ export type Database = {
           seller_note: string | null
           status: Database["public"]["Enums"]["malinha_status"]
           updated_at: string
+          vendedora_id: string | null
         }
         Insert: {
           client_cpf: string
@@ -83,6 +143,7 @@ export type Database = {
           seller_note?: string | null
           status?: Database["public"]["Enums"]["malinha_status"]
           updated_at?: string
+          vendedora_id?: string | null
         }
         Update: {
           client_cpf?: string
@@ -94,17 +155,105 @@ export type Database = {
           seller_note?: string | null
           status?: Database["public"]["Enums"]["malinha_status"]
           updated_at?: string
+          vendedora_id?: string | null
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendedoras: {
+        Row: {
+          created_at: string
+          id: string
+          loja_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          loja_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          loja_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendedoras_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "master" | "loja" | "vendedora"
       malinha_status:
         | "Enviada"
         | "Em aberto"
@@ -238,6 +387,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["master", "loja", "vendedora"],
       malinha_status: [
         "Enviada",
         "Em aberto",
