@@ -8,7 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { createMalinha, addProducts, uploadProductPhoto } from '@/lib/api';
 import type { ProductStatus } from '@/lib/types';
 
-const SIZES = ['PP', 'P', 'M', 'G', 'GG'];
+const SIZE_CATEGORIES = {
+  'Vestuário': ['PP', 'P', 'M', 'G', 'GG', 'XGG'],
+  'Calças/Saias': ['32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58'],
+  'Calçados': ['33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'],
+};
 
 interface LocalProduct {
   tempId: string;
@@ -30,9 +34,11 @@ export default function NovaMalinhaProdutos() {
 
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [code, setCode] = useState('');
+  const [sizeCategory, setSizeCategory] = useState<keyof typeof SIZE_CATEGORIES>('Vestuário');
   const [size, setSize] = useState('');
   const [qty, setQty] = useState('1');
   const [price, setPrice] = useState('');
+  const [observation, setObservation] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,6 +96,7 @@ export default function NovaMalinhaProdutos() {
         client_cpf: clientCpf,
         client_phone: clientPhone,
         seller_name: 'Ana Beatriz',
+        seller_note: observation || undefined,
       });
 
       // 3. Add products
@@ -125,13 +132,22 @@ export default function NovaMalinhaProdutos() {
             <Label>Código do produto</Label>
             <Input placeholder="Ex: VT-001" value={code} onChange={e => setCode(e.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Label>Categoria de tamanho</Label>
+            <Select value={sizeCategory} onValueChange={(v) => { setSizeCategory(v as keyof typeof SIZE_CATEGORIES); setSize(''); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.keys(SIZE_CATEGORIES).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>Tamanho</Label>
               <Select value={size} onValueChange={setSize}>
                 <SelectTrigger><SelectValue placeholder="Tam" /></SelectTrigger>
                 <SelectContent>
-                  {SIZES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {SIZE_CATEGORIES[sizeCategory].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -158,6 +174,11 @@ export default function NovaMalinhaProdutos() {
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
             </label>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Observação da vendedora</Label>
+            <Input placeholder="Ex: Cliente prefere cores claras" value={observation} onChange={e => setObservation(e.target.value)} />
           </div>
 
           <Button variant="secondary" onClick={handleAddProduct} disabled={!canAdd} className="w-full gap-2">

@@ -27,6 +27,7 @@ export async function createMalinha(malinha: {
   client_cpf: string;
   client_phone: string;
   seller_name: string;
+  seller_note?: string;
 }): Promise<string> {
   const { data, error } = await supabase
     .from('malinhas')
