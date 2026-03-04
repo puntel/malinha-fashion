@@ -3,7 +3,8 @@ import { Plus, LogOut, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
-import { fetchMalinhas } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import type { Malinha } from '@/lib/types';
 
 const statusColors: Record<string, string> = {
@@ -15,25 +16,35 @@ const statusColors: Record<string, string> = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { profile, signOut, user } = useAuth();
+
   const { data: malinhas = [], isLoading } = useQuery({
-    queryKey: ['malinhas'],
-    queryFn: fetchMalinhas,
+    queryKey: ['vendedora-malinhas', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('malinhas')
+        .select('*, malinha_products(*)')
+        .eq('vendedora_id', user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Malinha[]) || [];
+    },
+    enabled: !!user,
   });
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('pt-BR');
-  };
+  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR');
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
           <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Minha Malinha</p>
-            <h1 className="font-display text-xl font-semibold text-foreground">Olá, Ana Beatriz</h1>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Vendedora</p>
+            <h1 className="font-display text-xl font-semibold text-foreground">
+              Olá, {profile?.full_name || 'Vendedora'}
+            </h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
@@ -77,13 +88,8 @@ export default function Dashboard() {
       </main>
 
       <div className="fixed bottom-6 left-0 right-0 flex justify-center">
-        <Button
-          onClick={() => navigate('/nova-malinha')}
-          size="lg"
-          className="rounded-full shadow-lg px-6 gap-2"
-        >
-          <Plus className="h-5 w-5" />
-          Nova Malinha
+        <Button onClick={() => navigate('/nova-malinha')} size="lg" className="rounded-full shadow-lg px-6 gap-2">
+          <Plus className="h-5 w-5" /> Nova Malinha
         </Button>
       </div>
     </div>

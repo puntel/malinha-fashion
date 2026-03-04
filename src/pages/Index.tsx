@@ -12,8 +12,8 @@ export default function Index() {
       <p className="text-muted-foreground max-w-xs mb-8">
         Envie roupas em consignação com elegância e praticidade.
       </p>
-      <Button onClick={() => navigate('/dashboard')} size="lg" className="px-8">
-        Entrar como Vendedora
+      <Button onClick={() => navigate('/login')} size="lg" className="px-8">
+        Entrar
       </Button>
     </div>
   );
