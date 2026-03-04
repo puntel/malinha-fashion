@@ -107,6 +107,7 @@ export default function MalinhaResumo() {
             <p>📋 {malinha.client_cpf}</p>
             <p>📦 {products.length} {products.length === 1 ? 'peça' : 'peças'}</p>
             <p className="text-foreground font-medium">💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
+            <p className="text-success font-semibold">✅ Valor fechado: R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
 
@@ -117,13 +118,16 @@ export default function MalinhaResumo() {
             {products.map(p => (
               <div key={p.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
                 <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{p.code}</p>
                   <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
+                  {p.client_note && (
+                    <p className="text-xs text-primary mt-1 italic">💬 "{p.client_note}"</p>
+                  )}
                 </div>
-                {p.status === 'accepted' && <Badge className="ml-auto bg-success text-success-foreground text-xs">Aceita</Badge>}
-                {p.status === 'rejected' && <Badge className="ml-auto bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
-                {p.status === 'edited' && <Badge className="ml-auto bg-accent text-accent-foreground text-xs">Editada</Badge>}
+                {p.status === 'accepted' && <Badge className="ml-auto shrink-0 bg-success text-success-foreground text-xs">Aceita</Badge>}
+                {p.status === 'rejected' && <Badge className="ml-auto shrink-0 bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
+                {p.status === 'edited' && <Badge className="ml-auto shrink-0 bg-accent text-accent-foreground text-xs">Editada</Badge>}
               </div>
             ))}
           </div>
