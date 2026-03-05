@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Check, X, Pencil, Heart, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { fetchMalinhaById, updateMalinhaStatus, updateProductStatuses } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import type { Product, ProductStatus } from '@/lib/types';
 
 export default function ClienteView() {
@@ -18,14 +18,16 @@ export default function ClienteView() {
 
   useEffect(() => {
     if (!id) return;
-    fetchMalinhaById(id).then(malinha => {
-      if (malinha) {
-        setProducts(malinha.malinha_products || []);
-        setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
-        // Mark as "Em aberto" when client opens
-        if (malinha.status === 'Enviada') {
-          updateMalinhaStatus(malinha.id, 'Em aberto');
-        }
+    supabase.rpc('get_malinha_for_client', { _malinha_id: id }).then(({ data, error }) => {
+      if (error || !data) {
+        setLoading(false);
+        return;
+      }
+      const malinha = data as any;
+      setProducts(malinha.malinha_products || []);
+      setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
+      if (malinha.status === 'Enviada') {
+        supabase.rpc('update_malinha_client_status', { _malinha_id: id, _status: 'Em aberto' });
       }
       setLoading(false);
     });
@@ -68,8 +70,11 @@ export default function ClienteView() {
   const handleFinalize = async () => {
     setSaving(true);
     try {
-      await updateProductStatuses(products.map(p => ({ id: p.id, status: p.status, client_note: p.client_note })));
-      await updateMalinhaStatus(id!, 'Pedido realizado');
+      await supabase.rpc('update_product_client_statuses', {
+        _malinha_id: id!,
+        _products: JSON.stringify(products.map(p => ({ id: p.id, status: p.status, client_note: p.client_note }))),
+      });
+      await supabase.rpc('update_malinha_client_status', { _malinha_id: id!, _status: 'Pedido realizado' });
       setFinalized(true);
     } catch (err) {
       console.error(err);
