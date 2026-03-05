@@ -15,6 +15,7 @@ import NovaMalinhaCliente from "./pages/NovaMalinhaCliente";
 import NovaMalinhaProdutos from "./pages/NovaMalinhaProdutos";
 import MalinhaResumo from "./pages/MalinhaResumo";
 import ClienteView from "./pages/ClienteView";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
