@@ -15,6 +15,7 @@ import NovaMalinhaCliente from "./pages/NovaMalinhaCliente";
 import NovaMalinhaProdutos from "./pages/NovaMalinhaProdutos";
 import MalinhaResumo from "./pages/MalinhaResumo";
 import ClienteView from "./pages/ClienteView";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Role-based redirect */}
             <Route path="/dashboard" element={<RoleDashboardRedirect />} />
