@@ -244,12 +244,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_malinha_for_client: { Args: { _malinha_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      update_malinha_client_status: {
+        Args: {
+          _malinha_id: string
+          _status: Database["public"]["Enums"]["malinha_status"]
+        }
+        Returns: undefined
+      }
+      update_product_client_statuses: {
+        Args: { _malinha_id: string; _products: Json }
+        Returns: undefined
       }
     }
     Enums: {
