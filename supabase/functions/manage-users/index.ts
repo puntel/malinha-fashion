@@ -11,30 +11,33 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the caller is authenticated and is master
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Missing authorization");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
-
-    // Client with caller's token to verify role
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) throw new Error("Unauthorized");
-
-    // Check master role
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "master")
-      .maybeSingle();
-    if (!roleData) throw new Error("Forbidden: not master");
+
+    // Check if caller is using service role key (internal calls)
+    const token = authHeader.replace("Bearer ", "");
+    const isServiceRole = token === serviceRoleKey;
+
+    if (!isServiceRole) {
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user: caller } } = await callerClient.auth.getUser();
+      if (!caller) throw new Error("Unauthorized");
+
+      const { data: roleData } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "master")
+        .maybeSingle();
+      if (!roleData) throw new Error("Forbidden: not master");
+    }
 
     const body = await req.json();
     const { action } = body;
