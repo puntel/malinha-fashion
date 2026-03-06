@@ -20,18 +20,7 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     // Internal-only action: validate with internal secret
-    if (action === "internal_reset_password") {
-      const { user_email, new_password } = body;
-      // One-time admin operation - will be removed after use
-      const { data: { users } } = await adminClient.auth.admin.listUsers();
-      const target = users?.find((u: any) => u.email === user_email);
-      if (!target) throw new Error("User not found");
-      const { error } = await adminClient.auth.admin.updateUserById(target.id, { password: new_password });
-      if (error) throw error;
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // All actions below require authenticated master user
 
     // All other actions require authenticated master user
     const authHeader = req.headers.get("Authorization");
