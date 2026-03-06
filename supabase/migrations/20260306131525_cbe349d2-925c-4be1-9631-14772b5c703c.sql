@@ -1,0 +1,1 @@
+UPDATE public.profiles SET phone = '31984737608' WHERE user_id = '810e2c8d-9a1f-45a8-a27a-f87b2c849bfc'
