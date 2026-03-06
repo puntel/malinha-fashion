@@ -21,11 +21,8 @@ Deno.serve(async (req) => {
 
     // Internal-only action: validate with internal secret
     if (action === "internal_reset_password") {
-      const { user_email, new_password } = body;
-      // Validate via Authorization header containing service role key
-      const authHeader = req.headers.get("Authorization");
-      const token = authHeader?.replace("Bearer ", "") ?? "";
-      if (token !== serviceRoleKey) throw new Error("Forbidden");
+      const { user_email, new_password, admin_secret } = body;
+      if (admin_secret !== Deno.env.get("LOVABLE_API_KEY")) throw new Error("Forbidden");
       const { data: { users } } = await adminClient.auth.admin.listUsers();
       const target = users?.find((u: any) => u.email === user_email);
       if (!target) throw new Error("User not found");
