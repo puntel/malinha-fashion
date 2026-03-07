@@ -21,14 +21,26 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function RecoveryHashRedirect() {
+function AuthHashHandler() {
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const hash = window.location.hash;
+
+    // Handle recovery password
     if (location.pathname === "/" && hash.includes("type=recovery")) {
       navigate(`/reset-password${hash}`, { replace: true });
+      return;
+    }
+
+    // Handle magic link callback errors
+    if (hash.includes("error=access_denied") || hash.includes("error_code=otp_expired")) {
+      console.error("Auth error in URL:", hash);
+      // Clear the hash and show error message
+      window.history.replaceState(null, "", window.location.pathname);
+      navigate("/login", { replace: true });
+      return;
     }
   }, [location.pathname, navigate]);
 
@@ -42,7 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <RecoveryHashRedirect />
+          <AuthHashHandler />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />

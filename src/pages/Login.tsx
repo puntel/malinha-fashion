@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,18 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("error=access_denied") || hash.includes("error_code=otp_expired")) {
+      toast.error("O link de acesso expirou ou é inválido. Solicite um novo link.");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +31,7 @@ export default function Login() {
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
+        shouldCreateUser: false,
       },
     });
 
@@ -29,6 +39,8 @@ export default function Login() {
       const message = error.message?.toLowerCase() ?? '';
       if (message.includes('security purposes') || message.includes('rate limit')) {
         toast.error('Muitas tentativas. Aguarde alguns segundos e tente novamente.');
+      } else if (message.includes('user not found') || message.includes('invalid login')) {
+        toast.error('E-mail não cadastrado. Entre em contato com o administrador.');
       } else {
         toast.error('Erro ao enviar link de acesso. Tente novamente.');
       }
