@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import logo from '@/assets/logo.png';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Login() {
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -14,20 +17,32 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
+
     if (error) {
-      toast.error('Erro ao enviar link de acesso. Tente novamente.');
+      const message = error.message?.toLowerCase() ?? '';
+      if (message.includes('security purposes') || message.includes('rate limit')) {
+        toast.error('Muitas tentativas. Aguarde alguns segundos e tente novamente.');
+      } else {
+        toast.error('Erro ao enviar link de acesso. Tente novamente.');
+      }
     } else {
       setSent(true);
       toast.success('Link de acesso enviado! Verifique seu e-mail.');
     }
+
     setLoading(false);
   };
+
+  if (!authLoading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
