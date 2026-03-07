@@ -30,10 +30,10 @@ export default function MasterDashboard() {
   const [vendedoraDialogOpen, setVendedoraDialogOpen] = useState(false);
 
   // Loja form
-  const [lojaForm, setLojaForm] = useState({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '', owner_password: '' });
+  const [lojaForm, setLojaForm] = useState({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
 
   // Vendedora form
-  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', password: '', phone: '', loja_id: '' });
+  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '', loja_id: '' });
 
   const { data: malinhas = [], isLoading } = useQuery({
     queryKey: ['master-malinhas'],
@@ -70,7 +70,6 @@ export default function MasterDashboard() {
 
   const createLojaMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke('manage-users', {
         body: { action: 'create_loja', ...lojaForm },
       });
@@ -78,10 +77,10 @@ export default function MasterDashboard() {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    onSuccess: () => {
-      toast.success('Loja criada com sucesso!');
+    onSuccess: (data) => {
+      toast.success(`Loja criada! Senha temporária: ${data?.temporary_password || 'A1b2c3'}`);
       setLojaDialogOpen(false);
-      setLojaForm({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '', owner_password: '' });
+      setLojaForm({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
     },
     onError: (err: Error) => {
@@ -98,10 +97,10 @@ export default function MasterDashboard() {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    onSuccess: () => {
-      toast.success('Vendedora criada com sucesso!');
+    onSuccess: (data) => {
+      toast.success(`Vendedora criada! Senha temporária: ${data?.temporary_password || 'A1b2c3'}`);
       setVendedoraDialogOpen(false);
-      setVendedoraForm({ full_name: '', email: '', password: '', phone: '', loja_id: '' });
+      setVendedoraForm({ full_name: '', email: '', phone: '', loja_id: '' });
       queryClient.invalidateQueries({ queryKey: ['master-vendedoras'] });
     },
     onError: (err: Error) => {
@@ -211,10 +210,9 @@ export default function MasterDashboard() {
                     <Label>E-mail *</Label>
                     <Input type="email" value={lojaForm.owner_email} onChange={(e) => setLojaForm(f => ({ ...f, owner_email: e.target.value }))} required />
                   </div>
-                  <div className="space-y-1">
-                    <Label>Senha *</Label>
-                    <Input type="password" value={lojaForm.owner_password} onChange={(e) => setLojaForm(f => ({ ...f, owner_password: e.target.value }))} required minLength={6} />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A senha é gerada automaticamente e exibida após criar a loja.
+                  </p>
                   <Button type="submit" className="w-full" disabled={createLojaMutation.isPending}>
                     {createLojaMutation.isPending ? 'Criando...' : 'Criar Loja'}
                   </Button>
@@ -256,10 +254,9 @@ export default function MasterDashboard() {
                     <Label>E-mail *</Label>
                     <Input type="email" value={vendedoraForm.email} onChange={(e) => setVendedoraForm(f => ({ ...f, email: e.target.value }))} required />
                   </div>
-                  <div className="space-y-1">
-                    <Label>Senha *</Label>
-                    <Input type="password" value={vendedoraForm.password} onChange={(e) => setVendedoraForm(f => ({ ...f, password: e.target.value }))} required minLength={6} />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A senha é gerada automaticamente e exibida após criar a vendedora.
+                  </p>
                   <div className="space-y-1">
                     <Label>Celular</Label>
                     <Input value={vendedoraForm.phone} onChange={(e) => setVendedoraForm(f => ({ ...f, phone: e.target.value }))} placeholder="(31) 99999-9999" />
