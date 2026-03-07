@@ -8,30 +8,23 @@ import { toast } from 'sonner';
 
 export default function Login() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'forgot'>('login');
+  const [sent, setSent] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error('Credenciais inválidas. Verifique seu e-mail e senha.');
-    }
-    setLoading(false);
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
     if (error) {
-      toast.error('Erro ao enviar e-mail de recuperação.');
+      toast.error('Erro ao enviar link de acesso. Tente novamente.');
     } else {
-      toast.success('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+      setSent(true);
+      toast.success('Link de acesso enviado! Verifique seu e-mail.');
     }
     setLoading(false);
   };
@@ -41,10 +34,19 @@ export default function Login() {
       <img src={logo} alt="Malinha Store" className="h-20 w-20 mb-4 object-contain" />
       <h1 className="font-display text-2xl font-bold text-foreground mb-1">Malinha Store</h1>
       <p className="text-muted-foreground text-sm mb-8">
-        {mode === 'login' ? 'Faça login para continuar' : 'Recupere sua senha'}
+        {sent ? 'Verifique seu e-mail para acessar' : 'Digite seu e-mail para entrar'}
       </p>
 
-      {mode === 'login' ? (
+      {sent ? (
+        <div className="w-full max-w-sm text-center space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Enviamos um link de acesso para <strong>{email}</strong>. Clique no link no e-mail para entrar.
+          </p>
+          <Button variant="outline" className="w-full" onClick={() => setSent(false)}>
+            Enviar novamente
+          </Button>
+        </div>
+      ) : (
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
@@ -57,51 +59,9 @@ export default function Login() {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
-          </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Enviando...' : 'Enviar link de acesso'}
           </Button>
-          <button
-            type="button"
-            onClick={() => setMode('forgot')}
-            className="w-full text-sm text-primary hover:underline mt-2"
-          >
-            Esqueci minha senha
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleForgotPassword} className="w-full max-w-sm space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Enviando...' : 'Enviar link de recuperação'}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setMode('login')}
-            className="w-full text-sm text-primary hover:underline mt-2"
-          >
-            Voltar ao login
-          </button>
         </form>
       )}
     </div>
