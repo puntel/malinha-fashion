@@ -64,7 +64,10 @@ Deno.serve(async (req) => {
       if (userErr) throw userErr;
 
       const userId = newUser.user.id;
-      await adminClient.from("user_roles").insert({ user_id: userId, role: "loja" });
+      const { error: roleInsertErr } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: "loja" });
+      if (roleInsertErr) throw roleInsertErr;
 
       const { data: loja, error: lojaErr } = await adminClient
         .from("lojas")
@@ -73,7 +76,10 @@ Deno.serve(async (req) => {
         .single();
       if (lojaErr) throw lojaErr;
 
-      await adminClient.from("loja_members").insert({ user_id: userId, loja_id: loja.id });
+      const { error: memberInsertErr } = await adminClient
+        .from("loja_members")
+        .insert({ user_id: userId, loja_id: loja.id });
+      if (memberInsertErr) throw memberInsertErr;
 
       return new Response(JSON.stringify({ success: true, loja_id: loja.id, user_id: userId, temporary_password: temporaryPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
