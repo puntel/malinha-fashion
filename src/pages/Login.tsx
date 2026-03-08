@@ -28,7 +28,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Call edge function to validate email and get token
       const { data, error: fnError } = await supabase.functions.invoke('login-by-email', {
         body: { email: email.trim() },
       });
@@ -45,15 +44,14 @@ export default function Login() {
         return;
       }
 
-      // Use the token to verify OTP and create session
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        email: data.email,
-        token: data.token,
-        type: 'magiclink',
+      // Set the session returned by the edge function
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
       });
 
-      if (otpError) {
-        console.error('OTP verification error:', otpError);
+      if (sessionError) {
+        console.error('Session error:', sessionError);
         toast.error('Erro ao autenticar. Tente novamente.');
       } else {
         toast.success('Login realizado com sucesso!');
