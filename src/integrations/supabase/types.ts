@@ -252,6 +252,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_loja_member: {
+        Args: { _loja_id: string; _user_id: string }
+        Returns: boolean
+      }
       update_malinha_client_status: {
         Args: {
           _malinha_id: string
