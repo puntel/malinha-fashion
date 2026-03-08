@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LogOut, Search, Store, Loader2, Plus, Users, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Malinha } from '@/lib/types';
+import MalinhaActions from '@/components/MalinhaActions';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',

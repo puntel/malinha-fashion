@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LogOut, Search, Plus, Loader2, Users, UserPlus } from 'lucide-react';
 import type { Malinha } from '@/lib/types';
+import MalinhaActions from '@/components/MalinhaActions';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
