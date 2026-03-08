@@ -116,11 +116,23 @@ Deno.serve(async (req) => {
       if (userErr) throw userErr;
 
       const userId = newUser.user.id;
-      await adminClient.from("user_roles").insert({ user_id: userId, role: "vendedora" });
+      const { error: roleInsertErr } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: "vendedora" });
+      if (roleInsertErr) throw roleInsertErr;
+
       if (phone) {
-        await adminClient.from("profiles").update({ phone }).eq("user_id", userId);
+        const { error: profileUpdateErr } = await adminClient
+          .from("profiles")
+          .update({ phone })
+          .eq("user_id", userId);
+        if (profileUpdateErr) throw profileUpdateErr;
       }
-      await adminClient.from("vendedoras").insert({ user_id: userId, loja_id });
+
+      const { error: vendedoraInsertErr } = await adminClient
+        .from("vendedoras")
+        .insert({ user_id: userId, loja_id });
+      if (vendedoraInsertErr) throw vendedoraInsertErr;
 
       return new Response(JSON.stringify({ success: true, user_id: userId, temporary_password: temporaryPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
