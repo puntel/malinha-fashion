@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LogOut, Search, Store, Loader2, Plus, Users, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Malinha } from '@/lib/types';
+import MalinhaActions from '@/components/MalinhaActions';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -160,16 +161,21 @@ export default function MasterDashboard() {
             ) : (
               <div className="space-y-3">
                 {filtered.map((m) => (
-                  <button key={m.id} onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md active:scale-[0.98]">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">{m.client_name}</p>
-                        <p className="text-xs text-muted-foreground">Vendedora: {m.seller_name}</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">{formatDate(m.created_at)} · {m.malinha_products?.length || 0} peças</p>
+                  <div key={m.id} className="relative w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md">
+                    <button onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full text-left active:scale-[0.98]">
+                      <div className="flex items-start justify-between gap-2 pr-8">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">{m.client_name}</p>
+                          <p className="text-xs text-muted-foreground">Vendedora: {m.seller_name}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">{formatDate(m.created_at)} · {m.malinha_products?.length || 0} peças</p>
+                        </div>
+                        <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
                       </div>
-                      <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
+                    </button>
+                    <div className="absolute top-3 right-3">
+                      <MalinhaActions malinha={m} />
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
