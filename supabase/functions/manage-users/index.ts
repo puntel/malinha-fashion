@@ -91,15 +91,17 @@ Deno.serve(async (req) => {
       if (!isMaster && !isLoja) throw new Error("Forbidden: requires master or loja role");
 
       const { email, password, full_name, phone, loja_id } = body;
+      if (!loja_id) throw new Error("Loja é obrigatória para cadastrar vendedora");
 
       // If loja, verify they belong to this loja
       if (isLoja && !isMaster) {
-        const { data: membership } = await adminClient
+        const { data: membership, error: membershipErr } = await adminClient
           .from("loja_members")
           .select("id")
           .eq("user_id", caller.id)
           .eq("loja_id", loja_id)
           .maybeSingle();
+        if (membershipErr) throw membershipErr;
         if (!membership) throw new Error("Forbidden: you don't belong to this loja");
       }
 
