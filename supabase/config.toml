@@ -2,3 +2,6 @@ project_id = "nrlwfsmquwceathtxjgo"
 
 [functions.manage-users]
 verify_jwt = false
+
+[functions.login-by-email]
+verify_jwt = false

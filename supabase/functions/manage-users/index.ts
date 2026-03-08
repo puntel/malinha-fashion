@@ -39,15 +39,18 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await callerClient.auth.getUser();
     if (!caller) throw new Error("Unauthorized");
 
-    const { data: roleData } = await adminClient
+    // Check caller role
+    const { data: callerRoles } = await adminClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "master")
-      .maybeSingle();
-    if (!roleData) throw new Error("Forbidden: not master");
+      .eq("user_id", caller.id);
+    
+    const roles = (callerRoles || []).map((r: any) => r.role);
+    const isMaster = roles.includes("master");
+    const isLoja = roles.includes("loja");
 
     if (action === "create_loja") {
+      if (!isMaster) throw new Error("Forbidden: not master");
       const { loja_name, loja_phone, loja_cnpj, owner_email, owner_password, owner_name } = body;
       const temporaryPassword = owner_password?.trim() || generateTemporaryPassword();
 
@@ -77,7 +80,22 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create_vendedora") {
+      // Both master and loja can create vendedoras
+      if (!isMaster && !isLoja) throw new Error("Forbidden: requires master or loja role");
+
       const { email, password, full_name, phone, loja_id } = body;
+
+      // If loja, verify they belong to this loja
+      if (isLoja && !isMaster) {
+        const { data: membership } = await adminClient
+          .from("loja_members")
+          .select("id")
+          .eq("user_id", caller.id)
+          .eq("loja_id", loja_id)
+          .maybeSingle();
+        if (!membership) throw new Error("Forbidden: you don't belong to this loja");
+      }
+
       const temporaryPassword = password?.trim() || generateTemporaryPassword();
 
       const { data: newUser, error: userErr } = await adminClient.auth.admin.createUser({
@@ -101,6 +119,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "reset_password") {
+      if (!isMaster) throw new Error("Forbidden: not master");
       const { user_email, new_password } = body;
       const { data: { users } } = await adminClient.auth.admin.listUsers();
       const target = users?.find((u: any) => u.email === user_email);

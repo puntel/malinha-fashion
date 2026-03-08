@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Search, Plus, Loader2, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut, Search, Plus, Loader2, Users, UserPlus } from 'lucide-react';
 import type { Malinha } from '@/lib/types';
 
 const statusColors: Record<string, string> = {
@@ -19,10 +22,26 @@ const statusColors: Record<string, string> = {
 export default function LojaDashboard() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'malinhas' | 'vendedoras'>('malinhas');
+  const [showAddVendedora, setShowAddVendedora] = useState(false);
+  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '' });
+  const [creating, setCreating] = useState(false);
 
-  // Fetch all malinhas visible to this loja (RLS handles filtering)
+  // Get current user's loja_id
+  const { data: lojaId } = useQuery({
+    queryKey: ['my-loja-id'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('loja_members')
+        .select('loja_id')
+        .single();
+      return data?.loja_id || null;
+    },
+  });
+
   const { data: malinhas = [], isLoading } = useQuery({
     queryKey: ['loja-malinhas'],
     queryFn: async () => {
@@ -54,6 +73,43 @@ export default function LojaDashboard() {
   });
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+
+  const handleCreateVendedora = async () => {
+    if (!vendedoraForm.full_name.trim() || !vendedoraForm.email.trim()) {
+      toast({ title: 'Preencha nome e e-mail', variant: 'destructive' });
+      return;
+    }
+    if (!lojaId) {
+      toast({ title: 'Loja não encontrada', variant: 'destructive' });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'create_vendedora',
+          email: vendedoraForm.email.trim(),
+          full_name: vendedoraForm.full_name.trim(),
+          phone: vendedoraForm.phone.trim() || null,
+          loja_id: lojaId,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: 'Vendedora criada com sucesso!' });
+      setVendedoraForm({ full_name: '', email: '', phone: '' });
+      setShowAddVendedora(false);
+      queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar vendedora';
+      toast({ title: msg, variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,6 +184,50 @@ export default function LojaDashboard() {
 
         {tab === 'vendedoras' && (
           <div className="space-y-3">
+            <Dialog open={showAddVendedora} onOpenChange={setShowAddVendedora}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full gap-2">
+                  <UserPlus className="h-4 w-4" /> Adicionar Vendedora
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova Vendedora</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Nome completo *</Label>
+                    <Input
+                      value={vendedoraForm.full_name}
+                      onChange={(e) => setVendedoraForm((f) => ({ ...f, full_name: e.target.value }))}
+                      placeholder="Nome da vendedora"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>E-mail *</Label>
+                    <Input
+                      type="email"
+                      value={vendedoraForm.email}
+                      onChange={(e) => setVendedoraForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={vendedoraForm.phone}
+                      onChange={(e) => setVendedoraForm((f) => ({ ...f, phone: e.target.value }))}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                  <Button onClick={handleCreateVendedora} disabled={creating} className="w-full">
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Criar Vendedora
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {vendedoras.length === 0 ? (
               <p className="text-center text-muted-foreground py-20">Nenhuma vendedora cadastrada.</p>
             ) : (
