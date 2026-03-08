@@ -40,10 +40,11 @@ Deno.serve(async (req) => {
     if (!caller) throw new Error("Unauthorized");
 
     // Check caller role
-    const { data: callerRoles } = await adminClient
+    const { data: callerRoles, error: rolesErr } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id);
+    if (rolesErr) throw rolesErr;
     
     const roles = (callerRoles || []).map((r: any) => r.role);
     const isMaster = roles.includes("master");
@@ -63,7 +64,10 @@ Deno.serve(async (req) => {
       if (userErr) throw userErr;
 
       const userId = newUser.user.id;
-      await adminClient.from("user_roles").insert({ user_id: userId, role: "loja" });
+      const { error: roleInsertErr } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: "loja" });
+      if (roleInsertErr) throw roleInsertErr;
 
       const { data: loja, error: lojaErr } = await adminClient
         .from("lojas")
@@ -72,7 +76,10 @@ Deno.serve(async (req) => {
         .single();
       if (lojaErr) throw lojaErr;
 
-      await adminClient.from("loja_members").insert({ user_id: userId, loja_id: loja.id });
+      const { error: memberInsertErr } = await adminClient
+        .from("loja_members")
+        .insert({ user_id: userId, loja_id: loja.id });
+      if (memberInsertErr) throw memberInsertErr;
 
       return new Response(JSON.stringify({ success: true, loja_id: loja.id, user_id: userId, temporary_password: temporaryPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -84,15 +91,17 @@ Deno.serve(async (req) => {
       if (!isMaster && !isLoja) throw new Error("Forbidden: requires master or loja role");
 
       const { email, password, full_name, phone, loja_id } = body;
+      if (!loja_id) throw new Error("Loja é obrigatória para cadastrar vendedora");
 
       // If loja, verify they belong to this loja
       if (isLoja && !isMaster) {
-        const { data: membership } = await adminClient
+        const { data: membership, error: membershipErr } = await adminClient
           .from("loja_members")
           .select("id")
           .eq("user_id", caller.id)
           .eq("loja_id", loja_id)
           .maybeSingle();
+        if (membershipErr) throw membershipErr;
         if (!membership) throw new Error("Forbidden: you don't belong to this loja");
       }
 
@@ -107,11 +116,23 @@ Deno.serve(async (req) => {
       if (userErr) throw userErr;
 
       const userId = newUser.user.id;
-      await adminClient.from("user_roles").insert({ user_id: userId, role: "vendedora" });
+      const { error: roleInsertErr } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: "vendedora" });
+      if (roleInsertErr) throw roleInsertErr;
+
       if (phone) {
-        await adminClient.from("profiles").update({ phone }).eq("user_id", userId);
+        const { error: profileUpdateErr } = await adminClient
+          .from("profiles")
+          .update({ phone })
+          .eq("user_id", userId);
+        if (profileUpdateErr) throw profileUpdateErr;
       }
-      await adminClient.from("vendedoras").insert({ user_id: userId, loja_id });
+
+      const { error: vendedoraInsertErr } = await adminClient
+        .from("vendedoras")
+        .insert({ user_id: userId, loja_id });
+      if (vendedoraInsertErr) throw vendedoraInsertErr;
 
       return new Response(JSON.stringify({ success: true, user_id: userId, temporary_password: temporaryPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
