@@ -40,10 +40,11 @@ Deno.serve(async (req) => {
     if (!caller) throw new Error("Unauthorized");
 
     // Check caller role
-    const { data: callerRoles } = await adminClient
+    const { data: callerRoles, error: rolesErr } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id);
+    if (rolesErr) throw rolesErr;
     
     const roles = (callerRoles || []).map((r: any) => r.role);
     const isMaster = roles.includes("master");
