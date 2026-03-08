@@ -7,18 +7,18 @@ import { Label } from '@/components/ui/label';
 import logo from '@/assets/logo.png';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("error=access_denied") || hash.includes("error_code=otp_expired")) {
-      toast.error("O link de acesso expirou ou é inválido. Solicite um novo link.");
+      toast.error("Erro de autenticação. Tente novamente.");
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, [location]);
@@ -27,26 +27,40 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        shouldCreateUser: false,
-      },
-    });
+    try {
+      // Call edge function to validate email and get token
+      const { data, error: fnError } = await supabase.functions.invoke('login-by-email', {
+        body: { email: email.trim() },
+      });
 
-    if (error) {
-      const message = error.message?.toLowerCase() ?? '';
-      if (message.includes('security purposes') || message.includes('rate limit')) {
-        toast.error('Muitas tentativas. Aguarde alguns segundos e tente novamente.');
-      } else if (message.includes('user not found') || message.includes('invalid login')) {
-        toast.error('E-mail não cadastrado. Entre em contato com o administrador.');
-      } else {
-        toast.error('Erro ao enviar link de acesso. Tente novamente.');
+      if (fnError) {
+        toast.error('Erro ao conectar ao servidor. Tente novamente.');
+        setLoading(false);
+        return;
       }
-    } else {
-      setSent(true);
-      toast.success('Link de acesso enviado! Verifique seu e-mail.');
+
+      if (data?.error) {
+        toast.error(data.error);
+        setLoading(false);
+        return;
+      }
+
+      // Use the token to verify OTP and create session
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.token,
+        type: 'magiclink',
+      });
+
+      if (otpError) {
+        console.error('OTP verification error:', otpError);
+        toast.error('Erro ao autenticar. Tente novamente.');
+      } else {
+        toast.success('Login realizado com sucesso!');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      toast.error('Erro inesperado. Tente novamente.');
     }
 
     setLoading(false);
@@ -61,36 +75,32 @@ export default function Login() {
       <img src={logo} alt="Malinha Store" className="h-20 w-20 mb-4 object-contain" />
       <h1 className="font-display text-2xl font-bold text-foreground mb-1">Malinha Store</h1>
       <p className="text-muted-foreground text-sm mb-8">
-        {sent ? 'Verifique seu e-mail para acessar' : 'Digite seu e-mail para entrar'}
+        Digite seu e-mail para entrar
       </p>
 
-      {sent ? (
-        <div className="w-full max-w-sm text-center space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Enviamos um link de acesso para <strong>{email}</strong>. Clique no link no e-mail para entrar.
-          </p>
-          <Button variant="outline" className="w-full" onClick={() => setSent(false)}>
-            Enviar novamente
-          </Button>
+      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            required
+          />
         </div>
-      ) : (
-        <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Enviando...' : 'Enviar link de acesso'}
-          </Button>
-        </form>
-      )}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Entrando...
+            </>
+          ) : (
+            'Entrar'
+          )}
+        </Button>
+      </form>
     </div>
   );
 }
