@@ -250,8 +250,8 @@ export default function LojaDashboard() {
             ) : (
               vendedoras.map((v: any) => (
                 <div key={v.id} className="rounded-xl border bg-card p-4">
-                  <p className="font-medium text-foreground">{(v as any).profiles?.full_name || 'Sem nome'}</p>
-                  <p className="text-sm text-muted-foreground">{(v as any).profiles?.email || ''}</p>
+                  <p className="font-medium text-foreground">{v.profile?.full_name || 'Sem nome'}</p>
+                  <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
                 </div>
               ))
             )}

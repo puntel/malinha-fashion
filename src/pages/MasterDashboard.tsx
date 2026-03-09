@@ -321,10 +321,10 @@ export default function MasterDashboard() {
             ) : (
               vendedoras.map((v: any) => (
                 <div key={v.id} className="rounded-xl border bg-card p-4">
-                  <p className="font-medium text-foreground">{v.profiles?.full_name || 'Sem nome'}</p>
-                  <p className="text-sm text-muted-foreground">{v.profiles?.email || ''}</p>
-                  {v.profiles?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profiles.phone}</p>}
-                  <p className="text-xs text-muted-foreground mt-1">Loja: {v.lojas?.name || '—'}</p>
+                  <p className="font-medium text-foreground">{v.profile?.full_name || 'Sem nome'}</p>
+                  <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
+                  {v.profile?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profile.phone}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">Loja: {v.loja?.name || '—'}</p>
                 </div>
               ))
             )}
