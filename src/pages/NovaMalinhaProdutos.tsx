@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createMalinha, addProducts, uploadProductPhoto } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import type { ProductStatus } from '@/lib/types';
 
 const SIZE_CATEGORIES = {
