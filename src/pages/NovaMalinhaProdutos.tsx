@@ -29,6 +29,7 @@ interface LocalProduct {
 
 export default function NovaMalinhaProdutos() {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [searchParams] = useSearchParams();
   const clientName = searchParams.get('name') || '';
   const clientCpf = searchParams.get('cpf') || '';
@@ -79,6 +80,11 @@ export default function NovaMalinhaProdutos() {
   };
 
   const handleFinalize = async () => {
+    if (!user) {
+      toast.error('Sessão inválida. Faça login novamente.');
+      return;
+    }
+
     setSaving(true);
     try {
       // 1. Upload photos
@@ -97,7 +103,8 @@ export default function NovaMalinhaProdutos() {
         client_name: clientName,
         client_cpf: clientCpf,
         client_phone: clientPhone,
-        seller_name: 'Ana Beatriz',
+        seller_name: profile?.full_name || 'Vendedora',
+        vendedora_id: user.id,
         seller_note: observation || undefined,
       });
 
@@ -107,6 +114,7 @@ export default function NovaMalinhaProdutos() {
       navigate(`/malinha/${malinhaId}/resumo`);
     } catch (err) {
       console.error(err);
+      toast.error('Não foi possível salvar a malinha.');
     } finally {
       setSaving(false);
     }
