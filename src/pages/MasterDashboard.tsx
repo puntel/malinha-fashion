@@ -60,12 +60,43 @@ export default function MasterDashboard() {
   const { data: vendedoras = [] } = useQuery({
     queryKey: ['master-vendedoras'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: vendedorasData, error: vendedorasError } = await supabase
         .from('vendedoras')
-        .select('*, profiles:user_id(full_name, email, phone), lojas:loja_id(name)')
+        .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      if (vendedorasError) throw vendedorasError;
+
+      const userIds = [...new Set((vendedorasData || []).map((v) => v.user_id))];
+      const lojaIds = [...new Set((vendedorasData || []).map((v) => v.loja_id))];
+
+      let profilesData: Array<{ user_id: string; full_name: string; email: string | null; phone: string | null }> = [];
+      if (userIds.length > 0) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, phone')
+          .in('user_id', userIds);
+        if (error) throw error;
+        profilesData = data || [];
+      }
+
+      let lojasData: Array<{ id: string; name: string }> = [];
+      if (lojaIds.length > 0) {
+        const { data, error } = await supabase
+          .from('lojas')
+          .select('id, name')
+          .in('id', lojaIds);
+        if (error) throw error;
+        lojasData = data || [];
+      }
+
+      const profileByUserId = new Map(profilesData.map((p) => [p.user_id, p]));
+      const lojaById = new Map(lojasData.map((l) => [l.id, l]));
+
+      return (vendedorasData || []).map((v) => ({
+        ...v,
+        profile: profileByUserId.get(v.user_id) || null,
+        loja: lojaById.get(v.loja_id) || null,
+      }));
     },
   });
 

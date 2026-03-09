@@ -58,12 +58,27 @@ export default function LojaDashboard() {
   const { data: vendedoras = [] } = useQuery({
     queryKey: ['loja-vendedoras'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: vendedorasData, error: vendedorasError } = await supabase
         .from('vendedoras')
-        .select('*, profiles:user_id(full_name, email)')
+        .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      if (vendedorasError) throw vendedorasError;
+
+      const userIds = [...new Set((vendedorasData || []).map((v) => v.user_id))];
+      if (userIds.length === 0) return [];
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', userIds);
+      if (profilesError) throw profilesError;
+
+      const profileByUserId = new Map((profilesData || []).map((p) => [p.user_id, p]));
+
+      return (vendedorasData || []).map((v) => ({
+        ...v,
+        profile: profileByUserId.get(v.user_id) || null,
+      }));
     },
   });
 
