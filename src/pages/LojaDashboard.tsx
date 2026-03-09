@@ -58,12 +58,27 @@ export default function LojaDashboard() {
   const { data: vendedoras = [] } = useQuery({
     queryKey: ['loja-vendedoras'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: vendedorasData, error: vendedorasError } = await supabase
         .from('vendedoras')
-        .select('*, profiles:user_id(full_name, email)')
+        .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      if (vendedorasError) throw vendedorasError;
+
+      const userIds = [...new Set((vendedorasData || []).map((v) => v.user_id))];
+      if (userIds.length === 0) return [];
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, phone')
+        .in('user_id', userIds);
+      if (profilesError) throw profilesError;
+
+      const profileByUserId = new Map((profilesData || []).map((p) => [p.user_id, p]));
+
+      return (vendedorasData || []).map((v) => ({
+        ...v,
+        profile: profileByUserId.get(v.user_id) || null,
+      }));
     },
   });
 
@@ -235,8 +250,8 @@ export default function LojaDashboard() {
             ) : (
               vendedoras.map((v: any) => (
                 <div key={v.id} className="rounded-xl border bg-card p-4">
-                  <p className="font-medium text-foreground">{(v as any).profiles?.full_name || 'Sem nome'}</p>
-                  <p className="text-sm text-muted-foreground">{(v as any).profiles?.email || ''}</p>
+                  <p className="font-medium text-foreground">{v.profile?.full_name || 'Sem nome'}</p>
+                  <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
                 </div>
               ))
             )}

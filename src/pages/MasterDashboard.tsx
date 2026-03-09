@@ -60,12 +60,43 @@ export default function MasterDashboard() {
   const { data: vendedoras = [] } = useQuery({
     queryKey: ['master-vendedoras'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: vendedorasData, error: vendedorasError } = await supabase
         .from('vendedoras')
-        .select('*, profiles:user_id(full_name, email, phone), lojas:loja_id(name)')
+        .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      if (vendedorasError) throw vendedorasError;
+
+      const userIds = [...new Set((vendedorasData || []).map((v) => v.user_id))];
+      const lojaIds = [...new Set((vendedorasData || []).map((v) => v.loja_id))];
+
+      let profilesData: Array<{ user_id: string; full_name: string; email: string | null; phone: string | null }> = [];
+      if (userIds.length > 0) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email, phone')
+          .in('user_id', userIds);
+        if (error) throw error;
+        profilesData = data || [];
+      }
+
+      let lojasData: Array<{ id: string; name: string }> = [];
+      if (lojaIds.length > 0) {
+        const { data, error } = await supabase
+          .from('lojas')
+          .select('id, name')
+          .in('id', lojaIds);
+        if (error) throw error;
+        lojasData = data || [];
+      }
+
+      const profileByUserId = new Map(profilesData.map((p) => [p.user_id, p]));
+      const lojaById = new Map(lojasData.map((l) => [l.id, l]));
+
+      return (vendedorasData || []).map((v) => ({
+        ...v,
+        profile: profileByUserId.get(v.user_id) || null,
+        loja: lojaById.get(v.loja_id) || null,
+      }));
     },
   });
 
@@ -290,10 +321,10 @@ export default function MasterDashboard() {
             ) : (
               vendedoras.map((v: any) => (
                 <div key={v.id} className="rounded-xl border bg-card p-4">
-                  <p className="font-medium text-foreground">{v.profiles?.full_name || 'Sem nome'}</p>
-                  <p className="text-sm text-muted-foreground">{v.profiles?.email || ''}</p>
-                  {v.profiles?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profiles.phone}</p>}
-                  <p className="text-xs text-muted-foreground mt-1">Loja: {v.lojas?.name || '—'}</p>
+                  <p className="font-medium text-foreground">{v.profile?.full_name || 'Sem nome'}</p>
+                  <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
+                  {v.profile?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profile.phone}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">Loja: {v.loja?.name || '—'}</p>
                 </div>
               ))
             )}
