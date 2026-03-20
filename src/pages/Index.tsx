@@ -10,7 +10,7 @@ export default function Index() {
       <img src={logo} alt="Malinha Store" className="h-28 w-28 mb-6 object-contain" />
       <h1 className="font-display text-3xl font-bold text-foreground mb-2">Malinha Store</h1>
       <p className="text-muted-foreground max-w-xs mb-8">
-        Envie roupas em consignação com elegância e praticidade.
+        Gerenciador de vestuários consignados.
       </p>
       <Button onClick={() => navigate('/login')} size="lg" className="px-8">
         Entrar
