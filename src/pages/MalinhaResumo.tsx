@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2,
+  Loader2, Pencil, Trash2, Plus, Camera, X
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchMalinhaById, updateMalinhaStatus } from '@/lib/api';
+import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Product } from '@/lib/types';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -16,13 +24,40 @@ const statusColors: Record<string, string> = {
   'Finalizada': 'bg-success text-success-foreground',
 };
 
+const emptyProductForm = { code: '', size: '', quantity: '1', price: '' };
+
 export default function MalinhaResumo() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const canEdit = role === 'master' || role === 'loja';
+
   const [copied, setCopied] = useState(false);
   const [sellerNote, setSellerNote] = useState('');
   const [finalizing, setFinalizing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Client edit
+  const [editClientOpen, setEditClientOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({ client_name: '', client_phone: '', client_cpf: '' });
+
+  // Product edit
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editProductForm, setEditProductForm] = useState({ ...emptyProductForm });
+  const [editProductPhotoFile, setEditProductPhotoFile] = useState<File | null>(null);
+  const [editProductPhotoPreview, setEditProductPhotoPreview] = useState<string>('');
+
+  // Add product
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [addProductForm, setAddProductForm] = useState({ ...emptyProductForm });
+  const [addProductPhotoFile, setAddProductPhotoFile] = useState<File | null>(null);
+  const [addProductPhotoPreview, setAddProductPhotoPreview] = useState<string>('');
+
+  // Delete product
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
 
   const { data: malinha, isLoading } = useQuery({
     queryKey: ['malinha', id],
@@ -30,26 +65,23 @@ export default function MalinhaResumo() {
     enabled: !!id,
   });
 
-  // Sync sellerNote when data loads
-  useState(() => {
-    if (malinha?.seller_note && !sellerNote) setSellerNote(malinha.seller_note);
-  });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['malinha', id] });
+    queryClient.invalidateQueries({ queryKey: ['master-malinhas'] });
+    queryClient.invalidateQueries({ queryKey: ['loja-malinhas'] });
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
 
-  if (!malinha) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Malinha não encontrada.</p>
-      </div>
-    );
-  }
+  if (!malinha) return (
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-muted-foreground">Malinha não encontrada.</p>
+    </div>
+  );
 
   const products = malinha.malinha_products || [];
   const link = `${window.location.origin}/malinha/${malinha.id}`;
@@ -71,8 +103,7 @@ export default function MalinhaResumo() {
     setFinalizing(true);
     try {
       await updateMalinhaStatus(malinha.id, 'Finalizada', sellerNote);
-      queryClient.invalidateQueries({ queryKey: ['malinha', id] });
-      queryClient.invalidateQueries({ queryKey: ['malinhas'] });
+      invalidate();
       toast.success('Malinha finalizada!');
     } catch (err) {
       console.error(err);
@@ -81,11 +112,206 @@ export default function MalinhaResumo() {
     }
   };
 
+  // ─── Edit client ───────────────────────────────────────────
+  const openEditClient = () => {
+    setClientForm({ client_name: malinha.client_name, client_phone: malinha.client_phone, client_cpf: malinha.client_cpf });
+    setEditClientOpen(true);
+  };
+
+  const handleSaveClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('malinhas').update(clientForm).eq('id', malinha.id);
+      if (error) throw error;
+      toast.success('Dados da cliente atualizados!');
+      setEditClientOpen(false);
+      invalidate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Photo helpers ─────────────────────────────────────────
+  const handlePhotoChange = (
+    file: File,
+    setPreview: (v: string) => void,
+    setPhotoFile: (f: File) => void
+  ) => {
+    setPhotoFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  // ─── Edit product ──────────────────────────────────────────
+  const openEditProduct = (p: Product) => {
+    setEditProduct(p);
+    setEditProductForm({ code: p.code, size: p.size, quantity: String(p.quantity), price: String(p.price) });
+    setEditProductPhotoFile(null);
+    setEditProductPhotoPreview(p.photo_url);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProduct) return;
+    setSaving(true);
+    try {
+      let photo_url = editProduct.photo_url;
+      if (editProductPhotoFile) {
+        photo_url = await uploadProductPhoto(editProductPhotoFile);
+      }
+      const { error } = await supabase.from('malinha_products').update({
+        code: editProductForm.code.trim(),
+        size: editProductForm.size.trim(),
+        quantity: Number(editProductForm.quantity),
+        price: Number(editProductForm.price),
+        photo_url,
+      }).eq('id', editProduct.id);
+      if (error) throw error;
+      toast.success('Peça atualizada!');
+      setEditProduct(null);
+      setEditProductPhotoFile(null);
+      setEditProductPhotoPreview('');
+      invalidate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar peça');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Delete product ────────────────────────────────────────
+  const handleDeleteProduct = async () => {
+    if (!deleteProduct) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('malinha_products').delete().eq('id', deleteProduct.id);
+      if (error) throw error;
+      toast.success('Peça removida!');
+      setDeleteProduct(null);
+      invalidate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao remover peça');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Add product ───────────────────────────────────────────
+  const openAddProduct = () => {
+    setAddProductForm({ ...emptyProductForm });
+    setAddProductPhotoFile(null);
+    setAddProductPhotoPreview('');
+    setAddProductOpen(true);
+  };
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let photo_url = '';
+      if (addProductPhotoFile) {
+        photo_url = await uploadProductPhoto(addProductPhotoFile);
+      }
+      const { error } = await supabase.from('malinha_products').insert({
+        malinha_id: malinha.id,
+        code: addProductForm.code.trim(),
+        size: addProductForm.size.trim(),
+        quantity: Number(addProductForm.quantity),
+        price: Number(addProductForm.price),
+        photo_url,
+        status: 'pending',
+      });
+      if (error) throw error;
+      toast.success('Peça adicionada!');
+      setAddProductOpen(false);
+      invalidate();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao adicionar peça');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const ProductForm = ({
+    form,
+    setForm,
+    photoPreview,
+    photoInputId,
+    onPhotoChange,
+    onSubmit,
+    isAdd = false,
+  }: {
+    form: typeof emptyProductForm;
+    setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
+    photoPreview: string;
+    photoInputId: string;
+    onPhotoChange: (f: File) => void;
+    onSubmit: (e: React.FormEvent) => Promise<void>;
+    isAdd?: boolean;
+  }) => (
+    <form onSubmit={onSubmit} className="space-y-3">
+      {/* Photo */}
+      <div className="space-y-1">
+        <Label>Foto da peça</Label>
+        <div className="flex items-center gap-3">
+          {photoPreview ? (
+            <img src={photoPreview} alt="preview" className="h-16 w-16 rounded-lg object-cover bg-muted" />
+          ) : (
+            <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
+              <Camera className="h-6 w-6 text-muted-foreground" />
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => document.getElementById(photoInputId)?.click()}
+          >
+            {photoPreview ? 'Trocar foto' : 'Adicionar foto'}
+          </Button>
+          <input
+            id={photoInputId}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoChange(f); }}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label>Código *</Label>
+          <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="REF-001" required />
+        </div>
+        <div className="space-y-1">
+          <Label>Tamanho *</Label>
+          <Input value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} placeholder="M" required />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label>Quantidade *</Label>
+          <Input type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} required />
+        </div>
+        <div className="space-y-1">
+          <Label>Preço (R$) *</Label>
+          <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" required />
+        </div>
+      </div>
+      <Button type="submit" className="w-full" disabled={saving}>
+        {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+        {isAdd ? 'Adicionar Peça' : 'Salvar Alterações'}
+      </Button>
+    </form>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -100,36 +326,67 @@ export default function MalinhaResumo() {
         <div className="rounded-xl border bg-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-base font-medium">{malinha.client_name}</h2>
-            <Badge className={statusColors[malinha.status]}>{malinha.status}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={statusColors[malinha.status]}>{malinha.status}</Badge>
+              {canEdit && (
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openEditClient}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
           <div className="text-sm text-muted-foreground space-y-1">
             <p>📱 {malinha.client_phone}</p>
             <p>📋 {malinha.client_cpf}</p>
             <p>📦 {products.length} {products.length === 1 ? 'peça' : 'peças'}</p>
-            <p className="text-foreground font-medium">💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
-            <p className="text-success font-semibold">✅ Valor fechado: R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}</p>
+            <p className="text-foreground font-medium">
+              💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
+            </p>
+            <p className="text-success font-semibold">
+              ✅ Valor fechado: R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
+            </p>
           </div>
         </div>
 
         {/* Products */}
         <div>
-          <h3 className="font-display text-sm font-medium mb-3">Peças</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-sm font-medium">Peças</h3>
+            {canEdit && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={openAddProduct}>
+                <Plus className="h-4 w-4" /> Adicionar peça
+              </Button>
+            )}
+          </div>
           <div className="space-y-2">
             {products.map(p => (
               <div key={p.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
-                <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted" />
+                <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{p.code}</p>
                   <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
-                  {p.client_note && (
-                    <p className="text-xs text-primary mt-1 italic">💬 "{p.client_note}"</p>
+                  {p.client_note && <p className="text-xs text-primary mt-1 italic">💬 "{p.client_note}"</p>}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {p.status === 'accepted' && <Badge className="bg-success text-success-foreground text-xs">Aceita</Badge>}
+                  {p.status === 'rejected' && <Badge className="bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
+                  {p.status === 'edited' && <Badge className="bg-accent text-accent-foreground text-xs">Editada</Badge>}
+                  {canEdit && (
+                    <>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditProduct(p)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteProduct(p)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
                   )}
                 </div>
-                {p.status === 'accepted' && <Badge className="ml-auto shrink-0 bg-success text-success-foreground text-xs">Aceita</Badge>}
-                {p.status === 'rejected' && <Badge className="ml-auto shrink-0 bg-destructive text-destructive-foreground text-xs">Recusada</Badge>}
-                {p.status === 'edited' && <Badge className="ml-auto shrink-0 bg-accent text-accent-foreground text-xs">Editada</Badge>}
               </div>
             ))}
+            {products.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-6">Nenhuma peça adicionada.</p>
+            )}
           </div>
         </div>
 
@@ -139,17 +396,16 @@ export default function MalinhaResumo() {
             <h3 className="font-display text-sm font-medium">Observações da Vendedora</h3>
             <Textarea
               placeholder="Ex: Fechou 3 peças, pagamento no cartão 2x. Devolver 2 peças na sexta."
-              value={sellerNote}
+              value={sellerNote || malinha.seller_note || ''}
               onChange={e => setSellerNote(e.target.value)}
               rows={3}
               className="text-sm"
               disabled={malinha.status === 'Finalizada'}
             />
             {malinha.status === 'Pedido realizado' && (
-              <Button onClick={handleFinalize} className="w-full gap-2" variant="default" size="lg" disabled={finalizing}>
+              <Button onClick={handleFinalize} className="w-full gap-2" size="lg" disabled={finalizing}>
                 {finalizing && <Loader2 className="h-4 w-4 animate-spin" />}
-                <CheckCircle2 className="h-5 w-5" />
-                Finalizar Malinha
+                <CheckCircle2 className="h-5 w-5" /> Finalizar Malinha
               </Button>
             )}
           </div>
@@ -167,12 +423,79 @@ export default function MalinhaResumo() {
               {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-          <Button onClick={handleWhatsApp} className="w-full gap-2" variant="default" size="lg">
-            <MessageCircle className="h-5 w-5" />
-            Enviar por WhatsApp
+          <Button onClick={handleWhatsApp} className="w-full gap-2" size="lg">
+            <MessageCircle className="h-5 w-5" /> Enviar por WhatsApp
           </Button>
         </div>
       </main>
+
+      {/* ─── Edit Client Dialog ─── */}
+      <Dialog open={editClientOpen} onOpenChange={setEditClientOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Dados da Cliente</DialogTitle></DialogHeader>
+          <form onSubmit={handleSaveClient} className="space-y-3">
+            <div className="space-y-1"><Label>Nome *</Label>
+              <Input value={clientForm.client_name} onChange={e => setClientForm(f => ({ ...f, client_name: e.target.value }))} required />
+            </div>
+            <div className="space-y-1"><Label>Telefone *</Label>
+              <Input value={clientForm.client_phone} onChange={e => setClientForm(f => ({ ...f, client_phone: e.target.value }))} required />
+            </div>
+            <div className="space-y-1"><Label>CPF</Label>
+              <Input value={clientForm.client_cpf} onChange={e => setClientForm(f => ({ ...f, client_cpf: e.target.value }))} />
+            </div>
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Salvar
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Edit Product Dialog ─── */}
+      <Dialog open={!!editProduct} onOpenChange={open => { if (!open) setEditProduct(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Peça</DialogTitle></DialogHeader>
+          <ProductForm
+            form={editProductForm}
+            setForm={setEditProductForm}
+            photoPreview={editProductPhotoPreview}
+            photoInputId="edit-product-photo"
+            onPhotoChange={f => handlePhotoChange(f, setEditProductPhotoPreview, setEditProductPhotoFile)}
+            onSubmit={handleSaveProduct}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Add Product Dialog ─── */}
+      <Dialog open={addProductOpen} onOpenChange={setAddProductOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Adicionar Peça</DialogTitle></DialogHeader>
+          <ProductForm
+            form={addProductForm}
+            setForm={setAddProductForm}
+            photoPreview={addProductPhotoPreview}
+            photoInputId="add-product-photo"
+            onPhotoChange={f => handlePhotoChange(f, setAddProductPhotoPreview, setAddProductPhotoFile)}
+            onSubmit={handleAddProduct}
+            isAdd
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete Product Confirmation ─── */}
+      <Dialog open={!!deleteProduct} onOpenChange={open => { if (!open) setDeleteProduct(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remover Peça</DialogTitle>
+            <DialogDescription>Tem certeza que deseja remover a peça <strong>{deleteProduct?.code}</strong> desta malinha?</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={() => setDeleteProduct(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteProduct} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Remover
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

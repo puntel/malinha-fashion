@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, X, Pencil, Heart, Loader2 } from 'lucide-react';
+import { Check, X, Pencil, Heart, Loader2, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,13 +16,13 @@ export default function ClienteView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Lightbox
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) return;
     supabase.rpc('get_malinha_for_client', { _malinha_id: id }).then(({ data, error }) => {
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
+      if (error || !data) { setLoading(false); return; }
       const malinha = data as any;
       setProducts(malinha.malinha_products || []);
       setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
@@ -33,26 +33,20 @@ export default function ClienteView() {
     });
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
 
-  if (!malinhaData) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <p className="text-muted-foreground text-center">Esta malinha não foi encontrada ou o link é inválido.</p>
-      </div>
-    );
-  }
+  if (!malinhaData) return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <p className="text-muted-foreground text-center">Esta malinha não foi encontrada ou o link é inválido.</p>
+    </div>
+  );
 
   const setStatus = (productId: string, status: ProductStatus, note?: string) => {
-    setProducts(prev =>
-      prev.map(p => p.id === productId ? { ...p, status, client_note: note || p.client_note } : p)
-    );
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, status, client_note: note || p.client_note } : p));
   };
 
   const handleEdit = (productId: string) => {
@@ -83,19 +77,17 @@ export default function ClienteView() {
     }
   };
 
-  if (finalized) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-        <div className="rounded-full bg-success/10 p-4 mb-4">
-          <Heart className="h-10 w-10 text-primary" />
-        </div>
-        <h1 className="font-display text-2xl font-semibold text-foreground mb-2">Obrigada! 💕</h1>
-        <p className="text-muted-foreground max-w-xs">
-          Suas escolhas foram enviadas. {malinhaData.seller_name} entrará em contato em breve para finalizar tudo!
-        </p>
+  if (finalized) return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
+      <div className="rounded-full bg-success/10 p-4 mb-4">
+        <Heart className="h-10 w-10 text-primary" />
       </div>
-    );
-  }
+      <h1 className="font-display text-2xl font-semibold text-foreground mb-2">Obrigada! 💕</h1>
+      <p className="text-muted-foreground max-w-xs">
+        Suas escolhas foram enviadas. {malinhaData.seller_name} entrará em contato em breve para finalizar tudo!
+      </p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -123,18 +115,30 @@ export default function ClienteView() {
               }`}
             >
               <div className="flex gap-3 p-4">
-                <img
-                  src={p.photo_url}
-                  alt={p.code}
-                  className={`h-20 w-20 rounded-lg object-cover bg-muted ${p.status === 'rejected' ? 'grayscale' : ''}`}
-                />
+                {/* Clickable image → opens lightbox */}
+                <button
+                  type="button"
+                  className="relative group shrink-0 h-20 w-20 rounded-lg overflow-hidden bg-muted focus:outline-none"
+                  onClick={() => p.photo_url && setLightboxUrl(p.photo_url)}
+                  title="Ver imagem completa"
+                >
+                  <img
+                    src={p.photo_url}
+                    alt={p.code}
+                    className={`h-full w-full object-cover transition-opacity ${p.status === 'rejected' ? 'grayscale' : ''}`}
+                  />
+                  {p.photo_url && (
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ZoomIn className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </button>
+
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground">{p.code}</p>
                   <p className="text-sm text-muted-foreground">Tamanho: {p.size}</p>
                   <p className="text-sm font-medium text-foreground">R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
-                  {p.client_note && (
-                    <p className="text-xs text-primary mt-1 italic">"{p.client_note}"</p>
-                  )}
+                  {p.client_note && <p className="text-xs text-primary mt-1 italic">"{p.client_note}"</p>}
                 </div>
               </div>
 
@@ -183,6 +187,7 @@ export default function ClienteView() {
         </div>
       </main>
 
+      {/* Fixed bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-card/90 backdrop-blur-md p-4">
         <div className="mx-auto max-w-lg">
           <div className="flex items-center justify-between mb-2">
@@ -197,6 +202,27 @@ export default function ClienteView() {
           </Button>
         </div>
       </div>
+
+      {/* ─── Image Lightbox ─── */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-7 w-7" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Imagem da peça"
+            className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
