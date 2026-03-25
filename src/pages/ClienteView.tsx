@@ -4,6 +4,7 @@ import { Check, X, Pencil, Heart, Loader2, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { Product, ProductStatus, Malinha } from '@/lib/types';
 
 export default function ClienteView() {
@@ -23,7 +24,7 @@ export default function ClienteView() {
     if (!id) return;
     supabase.rpc('get_malinha_for_client', { _malinha_id: id }).then(({ data, error }) => {
       if (error || !data) { setLoading(false); return; }
-      const malinha = data as Malinha;
+      const malinha = data as unknown as Malinha;
       setProducts(malinha.malinha_products || []);
       setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
       if (malinha.status === 'Enviada') {
@@ -84,7 +85,7 @@ export default function ClienteView() {
 
       const { error: productError } = await supabase.rpc('update_product_client_statuses', {
         _malinha_id: id!,
-        _products: JSON.stringify(finalProducts.map(p => ({ id: p.id, status: p.status, client_note: p.client_note ?? null }))),
+        _products: finalProducts.map(p => ({ id: p.id, status: p.status, client_note: p.client_note ?? null })),
       });
       if (productError) {
         throw productError;
