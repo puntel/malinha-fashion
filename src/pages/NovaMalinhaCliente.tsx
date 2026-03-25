@@ -17,6 +17,7 @@ export default function NovaMalinhaCliente() {
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
 
   // New fields
   const [sameAddress, setSameAddress] = useState(false);
@@ -91,6 +92,7 @@ export default function NovaMalinhaCliente() {
     setCpf(c.cpf || '');
     setPhone(c.phone);
     setAddress(c.address || '');
+    setEmail(c.email || '');
     setDeliveryLocation(c.address || '');
     setCollectionLocation(c.address || '');
     setClienteSearch(c.name);
@@ -104,6 +106,7 @@ export default function NovaMalinhaCliente() {
     setCpf('');
     setPhone('');
     setAddress('');
+    setEmail('');
     setDeliveryLocation('');
     setCollectionLocation('');
     setTotalPieces('');
@@ -120,6 +123,7 @@ export default function NovaMalinhaCliente() {
       name,
       cpf,
       phone,
+      email,
       address,
       deliveryLocation: sameAddress ? address : deliveryLocation,
       collectionLocation: sameAddress ? address : collectionLocation,
@@ -242,12 +246,13 @@ export default function NovaMalinhaCliente() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="address">Endereço (opcional)</Label>
+          <Label htmlFor="email">E-mail <span className="text-muted-foreground text-xs">(opcional)</span></Label>
           <Input
-            id="address"
-            placeholder="Rua Exemplo, 123, Bairro"
-            value={address}
-            onChange={e => setAddress(e.target.value)}
+            id="email"
+            type="email"
+            placeholder="exemplo@email.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
           />
         </div>
 

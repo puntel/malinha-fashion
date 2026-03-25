@@ -54,6 +54,7 @@ export interface Malinha {
   client_name: string;
   client_cpf: string;
   client_phone: string;
+  client_email?: string | null;
   status: MalinhaStatus;
   seller_name: string;
   vendedora_id: string | null;

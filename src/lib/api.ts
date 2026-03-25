@@ -26,6 +26,7 @@ export async function createMalinha(malinha: {
   client_name: string;
   client_cpf: string;
   client_phone: string;
+  client_email?: string;
   client_address?: string;
   delivery_location?: string;
   collection_location?: string;
@@ -109,4 +110,12 @@ export async function uploadProductPhoto(file: File): Promise<string> {
     .upload(fileName, file);
   if (error) throw error;
   return `${SUPABASE_URL}/storage/v1/object/public/product-photos/${fileName}`;
+}
+
+export async function sendEmailNotification(to: string, subject: string, html: string) {
+  const { data, error } = await supabase.functions.invoke('send-email', {
+    body: { to, subject, html },
+  });
+  if (error) throw error;
+  return data;
 }

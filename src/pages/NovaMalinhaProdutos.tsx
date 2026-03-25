@@ -40,6 +40,7 @@ export default function NovaMalinhaProdutos() {
   const totalPieces = searchParams.get('totalPieces') || '';
   const sendDate = searchParams.get('sendDate') || '';
   const returnDate = searchParams.get('returnDate') || '';
+  const clientEmail = searchParams.get('email') || '';
 
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [code, setCode] = useState('');
@@ -109,6 +110,7 @@ export default function NovaMalinhaProdutos() {
         client_name: clientName,
         client_cpf: clientCpf,
         client_phone: clientPhone,
+        client_email: clientEmail || undefined,
         client_address: clientAddress || undefined,
         delivery_location: deliveryLocation || undefined,
         collection_location: collectionLocation || undefined,

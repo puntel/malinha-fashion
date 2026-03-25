@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2,
-  Loader2, Pencil, Trash2, Plus, Camera, X
+  Loader2, Pencil, Trash2, Plus, Camera, X, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto } from '@/lib/api';
+import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto, sendEmailNotification } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ export default function MalinhaResumo() {
   const [sellerNote, setSellerNote] = useState('');
   const [finalizing, setFinalizing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Client edit
   const [editClientOpen, setEditClientOpen] = useState(false);
@@ -112,6 +113,36 @@ export default function MalinhaResumo() {
     const msg = encodeURIComponent(`Olá ${malinha.client_name}! 🛍️\n\nSua malinha está pronta! Confira as peças que separei para você:\n${link}`);
     const phone = malinha.client_phone.replace(/\D/g, '');
     window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
+  };
+
+  const handleEmail = async () => {
+    if (!malinha.client_email) {
+      toast.error('Cliente não possui e-mail cadastrado nesta malinha.');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const subject = `Sua Malinha BagSync está pronta! 🛍️`;
+      const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+          <h2 style="color: #8884d8;">Olá ${malinha.client_name}!</h2>
+          <p>Sua malinha está pronta! Confira as peças que separei para você clicando no link abaixo:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${link}" style="background-color: #8884d8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Ver Minha Malinha</a>
+          </div>
+          <p style="color: #666; font-size: 14px;">Se o botão não funcionar, copie e cole este link no seu navegador:<br><a href="${link}">${link}</a></p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #999;">Enviado via BagSync</p>
+        </div>
+      `;
+      await sendEmailNotification(malinha.client_email, subject, html);
+      toast.success('E-mail enviado com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao enviar e-mail. Verifique as configurações do Resend.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handleFinalize = async () => {
@@ -478,8 +509,11 @@ export default function MalinhaResumo() {
               {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-          <Button onClick={handleWhatsApp} className="w-full gap-2" size="lg">
+          <Button onClick={handleWhatsApp} className="w-full gap-2 mb-2" size="lg">
             <MessageCircle className="h-5 w-5" /> Enviar por WhatsApp
+          </Button>
+          <Button onClick={handleEmail} variant="outline" className="w-full gap-2" size="lg" disabled={sendingEmail}>
+            {sendingEmail ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />} Enviar por E-mail
           </Button>
         </div>
       </main>
