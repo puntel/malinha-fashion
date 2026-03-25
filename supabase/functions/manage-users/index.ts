@@ -86,6 +86,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "create_master") {
+      if (!isMaster) throw new Error("Forbidden: not master");
+      
+      const { email, password, full_name, phone } = body;
+      const temporaryPassword = password?.trim() || generateTemporaryPassword();
+
+      const { data: newUser, error: userErr } = await adminClient.auth.admin.createUser({
+        email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: { full_name },
+      });
+      if (userErr) throw userErr;
+
+      const userId = newUser.user.id;
+      const { error: roleInsertErr } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: "master" });
+      if (roleInsertErr) throw roleInsertErr;
+
+      if (phone) {
+        const { error: profileUpdateErr } = await adminClient
+          .from("profiles")
+          .update({ phone })
+          .eq("user_id", userId);
+        if (profileUpdateErr) throw profileUpdateErr;
+      }
+
+      return new Response(JSON.stringify({ success: true, user_id: userId, temporary_password: temporaryPassword }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "delete_user") {
+      if (!isMaster) throw new Error("Forbidden: only master can delete users");
+      const { user_id } = body;
+      
+      const { error } = await adminClient.auth.admin.deleteUser(user_id);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "create_vendedora") {
       // Both master and loja can create vendedoras
       if (!isMaster && !isLoja) throw new Error("Forbidden: requires master or loja role");

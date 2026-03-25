@@ -170,7 +170,7 @@ export default function LojaDashboard() {
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Loja</p>
-            <h1 className="font-display text-xl font-semibold text-foreground">Olá, {profile?.full_name || 'Loja'}</h1>
+            <h1 className="font-display text-xl font-semibold text-foreground">BagSync</h1>
           </div>
           <Button variant="ghost" size="icon" onClick={signOut}><LogOut className="h-5 w-5" /></Button>
         </div>

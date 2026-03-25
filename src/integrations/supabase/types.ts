@@ -43,8 +43,79 @@ export type Database = {
           },
         ]
       }
+      clientes: {
+        Row: {
+          address: string | null
+          archived: boolean
+          cpf: string | null
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          loja_id: string | null
+          name: string
+          notes: string | null
+          phone: string
+          updated_at: string
+          vendedora_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          archived?: boolean
+          cpf?: string | null
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          loja_id?: string | null
+          name: string
+          notes?: string | null
+          phone: string
+          updated_at?: string
+          vendedora_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          archived?: boolean
+          cpf?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          loja_id?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string
+          vendedora_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_vendedora_id_fkey"
+            columns: ["vendedora_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lojas: {
         Row: {
+          archived: boolean
           cnpj: string | null
           created_at: string
           created_by: string
@@ -63,11 +134,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           cnpj?: string | null
           created_at?: string
           created_by?: string
           id?: string
-          name?: string
+          name: string
           phone?: string | null
           updated_at?: string
         }
@@ -126,7 +198,11 @@ export type Database = {
           client_name: string
           client_phone: string
           created_at: string
+          freight_value: number | null
           id: string
+          is_return: boolean | null
+          logistics_type: string | null
+          original_malinha_id: string | null
           seller_name: string
           seller_note: string | null
           status: Database["public"]["Enums"]["malinha_status"]
@@ -138,7 +214,11 @@ export type Database = {
           client_name: string
           client_phone: string
           created_at?: string
+          freight_value?: number | null
           id?: string
+          is_return?: boolean | null
+          logistics_type?: string | null
+          original_malinha_id?: string | null
           seller_name?: string
           seller_note?: string | null
           status?: Database["public"]["Enums"]["malinha_status"]
@@ -209,6 +289,7 @@ export type Database = {
       }
       vendedoras: {
         Row: {
+          archived: boolean
           created_at: string
           id: string
           loja_id: string
@@ -216,6 +297,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived?: boolean
           created_at?: string
           id?: string
           loja_id: string

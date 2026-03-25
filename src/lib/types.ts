@@ -32,3 +32,29 @@ export interface Malinha {
   updated_at: string;
   malinha_products?: Product[];
 }
+
+export interface Profile {
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
+export interface Loja {
+  id: string;
+  name: string;
+  phone: string;
+  cnpj: string;
+  archived: boolean;
+  created_at: string;
+}
+
+export interface Vendedora {
+  id: string;
+  user_id: string;
+  loja_id: string;
+  archived: boolean;
+  created_at: string;
+  profile?: Profile | null;
+  loja?: { id: string, name: string } | null;
+}
