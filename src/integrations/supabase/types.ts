@@ -145,6 +145,132 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          brand: string | null
+          category: string | null
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          internal_code: string | null
+          loja_id: string | null
+          name: string
+          profit_percent: number | null
+          quantity: number
+          size: string | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          internal_code?: string | null
+          loja_id?: string | null
+          name: string
+          profit_percent?: number | null
+          quantity?: number
+          size?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          internal_code?: string | null
+          loja_id?: string | null
+          name?: string
+          profit_percent?: number | null
+          quantity?: number
+          size?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          discount: number | null
+          id: string
+          internal_code: string | null
+          loja_id: string | null
+          payment_method: string | null
+          product_name: string
+          quantity: number
+          value: number
+          vendedora_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          discount?: number | null
+          id?: string
+          internal_code?: string | null
+          loja_id?: string | null
+          payment_method?: string | null
+          product_name: string
+          quantity?: number
+          value?: number
+          vendedora_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          discount?: number | null
+          id?: string
+          internal_code?: string | null
+          loja_id?: string | null
+          payment_method?: string | null
+          product_name?: string
+          quantity?: number
+          value?: number
+          vendedora_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_loja_id_fkey"
+            columns: ["loja_id"]
+            isOneToOne: false
+            referencedRelation: "lojas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_vendedora_id_fkey"
+            columns: ["vendedora_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       malinha_products: {
         Row: {
           client_note: string | null

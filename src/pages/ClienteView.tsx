@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { Product, ProductStatus, Malinha } from '@/lib/types';
+import type { MalinhaProduct, ProductStatus, Malinha } from '@/lib/types';
 
 export default function ClienteView() {
   const { id } = useParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [malinhaData, setMalinhaData] = useState<{ client_name: string; seller_name: string; status: string } | null>(null);
+  const [malinha, setMalinha] = useState<Malinha | null>(null);
+  const [products, setProducts] = useState<MalinhaProduct[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
   const [finalized, setFinalized] = useState(false);
@@ -24,10 +24,10 @@ export default function ClienteView() {
     if (!id) return;
     supabase.rpc('get_malinha_for_client', { _malinha_id: id }).then(({ data, error }) => {
       if (error || !data) { setLoading(false); return; }
-      const malinha = data as unknown as Malinha;
-      setProducts(malinha.malinha_products || []);
-      setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
-      if (malinha.status === 'Enviada') {
+      const malinhaResult = data as unknown as Malinha;
+      setProducts(malinhaResult.malinha_products || []);
+      setMalinha(malinhaResult);
+      if (malinhaResult.status === 'Enviada') {
         supabase.rpc('update_malinha_client_status', { _malinha_id: id, _status: 'Em aberto' });
       }
       setLoading(false);
@@ -40,7 +40,7 @@ export default function ClienteView() {
     </div>
   );
 
-  if (!malinhaData) return (
+  if (!malinha) return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <p className="text-muted-foreground text-center">Esta malinha não foi encontrada ou o link é inválido.</p>
     </div>
@@ -113,7 +113,7 @@ export default function ClienteView() {
       </div>
       <h1 className="font-display text-2xl font-semibold text-foreground mb-2">Obrigada! 💕</h1>
       <p className="text-muted-foreground max-w-xs">
-        Suas escolhas foram enviadas. {malinhaData.seller_name} entrará em contato em breve para finalizar tudo!
+        Suas escolhas foram enviadas. {malinha.seller_name} entrará em contato em breve para finalizar tudo!
       </p>
     </div>
   );
@@ -124,10 +124,10 @@ export default function ClienteView() {
         <div className="mx-auto max-w-lg text-center">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Minha Malinha</p>
           <h1 className="font-display text-xl font-semibold text-foreground">
-            Olá, {malinhaData.client_name.split(' ')[0]}! 👋
+            Olá, {malinha.client_name.split(' ')[0]}! 👋
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {malinhaData.seller_name} preparou estas peças para você.
+            {malinha.seller_name} preparou estas peças para você.
           </p>
         </div>
       </header>

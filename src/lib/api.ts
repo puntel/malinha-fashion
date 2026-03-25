@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Malinha, Product, MalinhaStatus, ProductStatus } from './types';
+import type { Malinha, MalinhaProduct, MalinhaStatus, ProductStatus } from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -77,7 +77,7 @@ export async function createMalinha(malinha: {
   return data.id;
 }
 
-export async function addProducts(malinhaId: string, products: Omit<Product, 'id' | 'malinha_id' | 'created_at'>[]) {
+export async function addProducts(malinhaId: string, products: Omit<MalinhaProduct, 'id' | 'malinha_id' | 'created_at'>[]) {
   const rows = products.map(p => ({ ...p, malinha_id: malinhaId }));
   const { error } = await supabase.from('malinha_products').insert(rows);
   if (error) throw error;

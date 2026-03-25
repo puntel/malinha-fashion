@@ -18,6 +18,10 @@ import MalinhaResumo from "./pages/MalinhaResumo";
 import ClienteView from "./pages/ClienteView";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import Vendas from "./pages/Vendas";
+import Produtos from "./pages/Produtos";
+import Relatorios from "./pages/Relatorios";
+import MainLayout from "@/components/MainLayout";
 
 const queryClient = new QueryClient();
 
@@ -66,21 +70,50 @@ const App = () => (
             {/* Master */}
             <Route path="/master" element={
               <ProtectedRoute allowedRoles={['master']}>
-                <MasterDashboard />
+                <MainLayout>
+                  <MasterDashboard />
+                </MainLayout>
               </ProtectedRoute>
             } />
 
             {/* Loja */}
             <Route path="/loja" element={
               <ProtectedRoute allowedRoles={['loja']}>
-                <LojaDashboard />
+                <MainLayout>
+                  <LojaDashboard />
+                </MainLayout>
               </ProtectedRoute>
             } />
 
             {/* Vendedora */}
             <Route path="/vendedora" element={
               <ProtectedRoute allowedRoles={['vendedora']}>
-                <Dashboard />
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+
+            {/* New Features */}
+            <Route path="/vendas" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Vendas />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/produtos" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Produtos />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/relatorios" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Relatorios />
+                </MainLayout>
               </ProtectedRoute>
             } />
 

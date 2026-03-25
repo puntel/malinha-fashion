@@ -15,7 +15,7 @@ import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto } from '@/lib
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { Product } from '@/lib/types';
+import type { MalinhaProduct } from '@/lib/types';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -55,7 +55,7 @@ export default function MalinhaResumo() {
   });
 
   // Product edit
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editProduct, setEditProduct] = useState<MalinhaProduct | null>(null);
   const [editProductForm, setEditProductForm] = useState({ ...emptyProductForm });
   const [editProductPhotoFile, setEditProductPhotoFile] = useState<File | null>(null);
   const [editProductPhotoPreview, setEditProductPhotoPreview] = useState<string>('');
@@ -67,7 +67,7 @@ export default function MalinhaResumo() {
   const [addProductPhotoPreview, setAddProductPhotoPreview] = useState<string>('');
 
   // Delete product
-  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [deleteProduct, setDeleteProduct] = useState<MalinhaProduct | null>(null);
 
   const { data: malinha, isLoading } = useQuery({
     queryKey: ['malinha', id],
@@ -172,7 +172,7 @@ export default function MalinhaResumo() {
   };
 
   // ─── Edit product ──────────────────────────────────────────
-  const openEditProduct = (p: Product) => {
+  const openEditProduct = (p: MalinhaProduct) => {
     setEditProduct(p);
     setEditProductForm({ code: p.code, size: p.size, quantity: String(p.quantity), price: String(p.price) });
     setEditProductPhotoFile(null);
