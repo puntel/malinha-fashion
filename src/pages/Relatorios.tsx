@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import { 
   BarChart, 
   Bar, 
@@ -37,6 +38,30 @@ import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'dat
 import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 
+interface ReportSale {
+  id: string;
+  created_at: string;
+  product_name: string;
+  internal_code: string | null;
+  category: string | null;
+  value: number;
+  discount: number;
+  payment_method: string;
+  clientes: { name: string } | null;
+  vendedora: { full_name: string } | null;
+}
+
+interface ReportMalinha {
+  id: string;
+  created_at: string;
+  client_name: string;
+  status: string;
+  seller_name: string;
+  send_date?: string | null;
+  return_date?: string | null;
+  malinha_products: any[];
+}
+
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F'];
 
 export default function Relatorios() {
@@ -44,8 +69,8 @@ export default function Relatorios() {
   const [period, setPeriod] = useState('30');
   const [vendedoraFilter, setVendedoraFilter] = useState('all');
 
-  // Fetch loja_id
-  const { data: userData } = useQuery({
+  // Fetch loja_id for the current user
+  const { data: userData } = useQuery<{ loja_id: string | null | undefined }>({
     queryKey: ['user-loja', user?.id],
     queryFn: async () => {
       if (role === 'master') return { loja_id: null };
@@ -62,7 +87,7 @@ export default function Relatorios() {
   const lojaId = userData?.loja_id;
 
   // Fetch Vendedoras for filter
-  const { data: vendedoras = [] } = useQuery({
+  const { data: vendedoras = [] } = useQuery<{ id: string, full_name: string }[]>({
     queryKey: ['vendedoras-filter', lojaId],
     queryFn: async () => {
       let query = supabase.from('profiles').select('id, full_name').eq('role', 'vendedora');
@@ -73,7 +98,7 @@ export default function Relatorios() {
   });
 
   // Fetch all necessary data for reports
-  const { data: reportData, isLoading } = useQuery({
+  const { data: reportData, isLoading } = useQuery<{sales: ReportSale[], malinhas: ReportMalinha[], products: any[], clients: any[]}>({
     queryKey: ['report-data', lojaId, period, vendedoraFilter],
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(period));
@@ -101,10 +126,10 @@ export default function Relatorios() {
       const { data: clients } = await clientsQuery;
 
       return {
-        sales: sales || [],
-        malinhas: malinhas || [],
-        products: products || [],
-        clients: clients || []
+        sales: (sales as any[] || []) as ReportSale[],
+        malinhas: (malinhas as any[] || []) as ReportMalinha[],
+        products: products || [] as any[],
+        clients: clients || [] as any[]
       };
     },
     enabled: !!lojaId || role === 'master'
@@ -164,11 +189,17 @@ export default function Relatorios() {
 
   const exportToExcel = (type: string) => {
     if (!reportData) return;
-    let dataToExport: any[] = [];
-    let fileName = '';
+    const wb = XLSX.utils.book_new();
+    const dateStr = format(new Date(), 'ddMMyyyy');
 
-    if (type === 'vendas') {
-      dataToExport = reportData.sales.map(s => ({
+    const addSheet = (data: any[], sheetName: string) => {
+      if (data.length === 0) return;
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    };
+
+    if (type === 'vendas' || type === 'tudo') {
+      const data = reportData.sales.map(s => ({
         Data: format(new Date(s.created_at), 'dd/MM/yyyy'),
         Cliente: s.clientes?.name || 'Avulso',
         Produto: s.product_name,
@@ -176,26 +207,54 @@ export default function Relatorios() {
         Valor: s.value,
         Desconto: s.discount,
         Total: s.value - (s.discount || 0),
-        Pagamento: s.payment_method
+        Pagamento: s.payment_method,
+        Vendedora: s.vendedora?.full_name || 'N/A'
       }));
-      fileName = 'relatorio_vendas';
-    } else if (type === 'estoque') {
-      dataToExport = reportData.products.map(p => ({
+      addSheet(data, "Vendas");
+    }
+
+    if (type === 'estoque' || type === 'tudo') {
+      const data = reportData.products.map(p => ({
         Produto: p.name,
         Código: p.internal_code,
         Categoria: p.category,
         Marca: p.brand,
         Estoque: p.quantity,
         Preço: p.unit_price,
-        Tamanho: p.size
+        Tamanho: p.size,
+        Cor: p.color
       }));
-      fileName = 'relatorio_estoque';
+      addSheet(data, "Estoque");
     }
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dados");
-    XLSX.writeFile(wb, `${fileName}_${format(new Date(), 'ddMMyyyy')}.xlsx`);
+    if (type === 'malinhas' || type === 'tudo') {
+      const data = reportData.malinhas.map(m => ({
+        ID: m.id,
+        Cliente: m.client_name,
+        Status: m.status,
+        Data_Criacao: format(new Date(m.created_at), 'dd/MM/yyyy'),
+        Vendedora: m.seller_name,
+        Check_Envio: m.send_date ? format(new Date(m.send_date), 'dd/MM/yyyy') : '-',
+        Check_Retorno: m.return_date ? format(new Date(m.return_date), 'dd/MM/yyyy') : '-'
+      }));
+      addSheet(data, "Malinhas");
+    }
+
+    if (type === 'clientes' || type === 'tudo') {
+      const data = reportData.clients.map(c => ({
+        Nome: c.name,
+        Email: c.email,
+        WhatsApp: c.phone,
+        CPF: c.cpf,
+        Endereço: c.address,
+        Data_Cadastro: format(new Date(c.created_at), 'dd/MM/yyyy')
+      }));
+      addSheet(data, "Clientes");
+    }
+
+    const fileName = type === 'tudo' ? `exportar_tudo_bagsync_${dateStr}` : `relatorio_${type}_${dateStr}`;
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+    toast.success('Relatório exportado com sucesso!');
   };
 
   if (isLoading) return (
@@ -213,6 +272,10 @@ export default function Relatorios() {
           <p className="text-muted-foreground font-medium">Acompanhe o desempenho da sua loja em tempo real.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => exportToExcel('tudo')} className="gap-2 bg-primary/5 border-primary/20 text-primary hover:bg-primary/10">
+            <Download className="h-4 w-4" /> Exportar Tudo
+          </Button>
+          
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[180px]">
               <CalendarIcon className="h-4 w-4 mr-2" />

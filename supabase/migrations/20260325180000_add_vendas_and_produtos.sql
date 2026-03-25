@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.sales (
   value NUMERIC(15,2) NOT NULL DEFAULT 0,
   discount NUMERIC(15,2) DEFAULT 0,
   payment_method TEXT,
+  category TEXT,
   vendedora_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   loja_id UUID REFERENCES public.lojas(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
