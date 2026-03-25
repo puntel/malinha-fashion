@@ -26,6 +26,12 @@ export async function createMalinha(malinha: {
   client_name: string;
   client_cpf: string;
   client_phone: string;
+  client_address?: string;
+  delivery_location?: string;
+  collection_location?: string;
+  total_pieces?: number;
+  send_date?: string;
+  return_date?: string;
   seller_name: string;
   vendedora_id: string;
   seller_note?: string;
@@ -36,7 +42,7 @@ export async function createMalinha(malinha: {
     .select('id')
     .single();
   if (error) throw error;
-  return (data as any).id;
+  return data.id;
 }
 
 export async function addProducts(malinhaId: string, products: Omit<Product, 'id' | 'malinha_id' | 'created_at'>[]) {

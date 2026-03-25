@@ -4,7 +4,7 @@ import { Check, X, Pencil, Heart, Loader2, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import type { Product, ProductStatus } from '@/lib/types';
+import type { Product, ProductStatus, Malinha } from '@/lib/types';
 
 export default function ClienteView() {
   const { id } = useParams();
@@ -23,7 +23,7 @@ export default function ClienteView() {
     if (!id) return;
     supabase.rpc('get_malinha_for_client', { _malinha_id: id }).then(({ data, error }) => {
       if (error || !data) { setLoading(false); return; }
-      const malinha = data as any;
+      const malinha = data as Malinha;
       setProducts(malinha.malinha_products || []);
       setMalinhaData({ client_name: malinha.client_name, seller_name: malinha.seller_name, status: malinha.status });
       if (malinha.status === 'Enviada') {
@@ -46,7 +46,14 @@ export default function ClienteView() {
   );
 
   const setStatus = (productId: string, status: ProductStatus, note?: string) => {
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, status, client_note: note || p.client_note } : p));
+    setProducts(prev => prev.map(p => {
+      if (p.id !== productId) return p;
+      return {
+        ...p,
+        status,
+        client_note: note !== undefined ? note : p.client_note,
+      };
+    }));
   };
 
   const handleEdit = (productId: string) => {
@@ -64,14 +71,35 @@ export default function ClienteView() {
   const handleFinalize = async () => {
     setSaving(true);
     try {
-      await supabase.rpc('update_product_client_statuses', {
+      // If there is a client note being edited, persist it before finalizing
+      let finalProducts = products;
+      if (editingId) {
+        finalProducts = products.map(p =>
+          p.id === editingId ? { ...p, status: 'edited', client_note: editNote } : p
+        );
+        setProducts(finalProducts);
+        setEditingId(null);
+        setEditNote('');
+      }
+
+      const { error: productError } = await supabase.rpc('update_product_client_statuses', {
         _malinha_id: id!,
-        _products: JSON.stringify(products.map(p => ({ id: p.id, status: p.status, client_note: p.client_note }))),
+        _products: JSON.stringify(finalProducts.map(p => ({ id: p.id, status: p.status, client_note: p.client_note ?? null }))),
       });
-      await supabase.rpc('update_malinha_client_status', { _malinha_id: id!, _status: 'Pedido realizado' });
+      if (productError) {
+        throw productError;
+      }
+
+      const { error: statusError } = await supabase.rpc('update_malinha_client_status', { _malinha_id: id!, _status: 'Pedido realizado' });
+      if (statusError) {
+        throw statusError;
+      }
+
       setFinalized(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao finalizar pedido. Tente novamente.';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -179,7 +207,7 @@ export default function ClienteView() {
                     p.status === 'edited' || editingId === p.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-primary'
                   }`}
                 >
-                  <Pencil className="h-4 w-4" /> {editingId === p.id ? 'Salvar' : 'Editar'}
+                  <Pencil className="h-4 w-4" /> {editingId === p.id ? 'Salvar' : 'Observação'}
                 </button>
               </div>
             </div>

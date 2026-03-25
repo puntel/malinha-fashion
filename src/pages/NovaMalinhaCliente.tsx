@@ -4,6 +4,7 @@ import { ArrowLeft, UserRound, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +16,15 @@ export default function NovaMalinhaCliente() {
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+
+  // New fields
+  const [sameAddress, setSameAddress] = useState(false);
+  const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [collectionLocation, setCollectionLocation] = useState('');
+  const [totalPieces, setTotalPieces] = useState('');
+  const [sendDate, setSendDate] = useState(new Date().toISOString().split('T')[0]);
+  const [returnDate, setReturnDate] = useState('');
 
   // Autocomplete state
   const [clienteSearch, setClienteSearch] = useState('');
@@ -80,6 +90,9 @@ export default function NovaMalinhaCliente() {
     setName(c.name);
     setCpf(c.cpf || '');
     setPhone(c.phone);
+    setAddress(c.address || '');
+    setDeliveryLocation(c.address || '');
+    setCollectionLocation(c.address || '');
     setClienteSearch(c.name);
     setShowSuggestions(false);
   };
@@ -90,6 +103,12 @@ export default function NovaMalinhaCliente() {
     setName('');
     setCpf('');
     setPhone('');
+    setAddress('');
+    setDeliveryLocation('');
+    setCollectionLocation('');
+    setTotalPieces('');
+    setSendDate(new Date().toISOString().split('T')[0]);
+    setReturnDate('');
   };
 
   const isValid =
@@ -97,7 +116,17 @@ export default function NovaMalinhaCliente() {
     phone.replace(/\D/g, '').length >= 10;
 
   const handleAdvance = () => {
-    const params = new URLSearchParams({ name, cpf, phone });
+    const params = new URLSearchParams({
+      name,
+      cpf,
+      phone,
+      address,
+      deliveryLocation: sameAddress ? address : deliveryLocation,
+      collectionLocation: sameAddress ? address : collectionLocation,
+      totalPieces,
+      sendDate,
+      returnDate
+    });
     navigate(`/nova-malinha/produtos?${params.toString()}`);
   };
 
@@ -210,6 +239,85 @@ export default function NovaMalinhaCliente() {
             onChange={e => setPhone(formatPhone(e.target.value))}
             inputMode="tel"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address">Endereço (opcional)</Label>
+          <Input
+            id="address"
+            placeholder="Rua Exemplo, 123, Bairro"
+            value={address}
+            onChange={e => setAddress(e.target.value)}
+          />
+        </div>
+
+        {/* ─── Logística ─── */}
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <p className="text-sm font-medium text-foreground">Logística</p>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="sameAddress"
+              checked={sameAddress}
+              onCheckedChange={(checked) => setSameAddress(checked as boolean)}
+            />
+            <Label htmlFor="sameAddress" className="text-sm">MESMO ENDEREÇO DE CADASTRO</Label>
+          </div>
+
+          {!sameAddress && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryLocation">Local de entrega</Label>
+                <Input
+                  id="deliveryLocation"
+                  placeholder="Endereço de entrega"
+                  value={deliveryLocation}
+                  onChange={e => setDeliveryLocation(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="collectionLocation">Local de coleta</Label>
+                <Input
+                  id="collectionLocation"
+                  placeholder="Endereço de coleta"
+                  value={collectionLocation}
+                  onChange={e => setCollectionLocation(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="totalPieces">Total de peças enviadas</Label>
+            <Input
+              id="totalPieces"
+              type="number"
+              placeholder="0"
+              value={totalPieces}
+              onChange={e => setTotalPieces(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sendDate">Data de envio da mala</Label>
+            <Input
+              id="sendDate"
+              type="date"
+              value={sendDate}
+              onChange={e => setSendDate(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="returnDate">Data de retorno</Label>
+            <Input
+              id="returnDate"
+              type="date"
+              value={returnDate}
+              onChange={e => setReturnDate(e.target.value)}
+            />
+          </div>
         </div>
 
         <Button onClick={handleAdvance} disabled={!isValid} className="w-full mt-4" size="lg">

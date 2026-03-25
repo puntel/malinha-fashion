@@ -143,8 +143,9 @@ export default function ClientesTab({
       toast.success('Cliente cadastrado!');
       setCreateOpen(false);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao cadastrar cliente');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao cadastrar cliente';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -167,8 +168,9 @@ export default function ClientesTab({
       toast.success('Cliente atualizado!');
       setEditCliente(null);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao atualizar cliente');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar cliente';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -190,8 +192,9 @@ export default function ClientesTab({
       toast.success('Cliente excluído!');
       setDeleteCliente(null);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao excluir');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -234,7 +237,7 @@ export default function ClientesTab({
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data);
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
       // Skip header row
       const dataRows = rows.slice(1).filter(r => r.length > 0 && String(r[0] || '').trim());
@@ -266,8 +269,9 @@ export default function ClientesTab({
 
       toast.success(`${records.length} cliente(s) importado(s) com sucesso!`);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao importar arquivo');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao importar arquivo';
+      toast.error(errorMessage);
     } finally {
       setImporting(false);
     }

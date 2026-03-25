@@ -34,6 +34,12 @@ export default function NovaMalinhaProdutos() {
   const clientName = searchParams.get('name') || '';
   const clientCpf = searchParams.get('cpf') || '';
   const clientPhone = searchParams.get('phone') || '';
+  const clientAddress = searchParams.get('address') || '';
+  const deliveryLocation = searchParams.get('deliveryLocation') || '';
+  const collectionLocation = searchParams.get('collectionLocation') || '';
+  const totalPieces = searchParams.get('totalPieces') || '';
+  const sendDate = searchParams.get('sendDate') || '';
+  const returnDate = searchParams.get('returnDate') || '';
 
   const [products, setProducts] = useState<LocalProduct[]>([]);
   const [code, setCode] = useState('');
@@ -103,6 +109,12 @@ export default function NovaMalinhaProdutos() {
         client_name: clientName,
         client_cpf: clientCpf,
         client_phone: clientPhone,
+        client_address: clientAddress || undefined,
+        delivery_location: deliveryLocation || undefined,
+        collection_location: collectionLocation || undefined,
+        total_pieces: totalPieces ? parseInt(totalPieces) : undefined,
+        send_date: sendDate || undefined,
+        return_date: returnDate || undefined,
         seller_name: profile?.full_name || 'Vendedora',
         vendedora_id: user.id,
         seller_note: observation || undefined,
@@ -136,7 +148,19 @@ export default function NovaMalinhaProdutos() {
 
       <main className="mx-auto max-w-lg px-4 py-6 pb-32">
         <p className="text-sm text-muted-foreground mb-4">Cliente: <span className="font-medium text-foreground">{clientName}</span></p>
-
+        {clientAddress && (
+          <p className="text-sm text-muted-foreground mb-4">Endereço: <span className="font-medium text-foreground">{clientAddress}</span></p>
+        )}
+        {(deliveryLocation || collectionLocation || totalPieces || sendDate || returnDate) && (
+          <div className="rounded-xl border bg-card p-4 mb-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">Logística</p>
+            {deliveryLocation && <p className="text-sm text-muted-foreground">Entrega: {deliveryLocation}</p>}
+            {collectionLocation && <p className="text-sm text-muted-foreground">Coleta: {collectionLocation}</p>}
+            {totalPieces && <p className="text-sm text-muted-foreground">Total peças: {totalPieces}</p>}
+            {sendDate && <p className="text-sm text-muted-foreground">Envio: {new Date(sendDate).toLocaleDateString('pt-BR')}</p>}
+            {returnDate && <p className="text-sm text-muted-foreground">Retorno: {new Date(returnDate).toLocaleDateString('pt-BR')}</p>}
+          </div>
+        )}
         <div className="rounded-xl border bg-card p-4 space-y-4">
           <div className="space-y-2">
             <Label>Código do produto</Label>

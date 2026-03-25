@@ -12,6 +12,28 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { LogOut, Search, Plus, Loader2, Users, UserPlus, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Malinha } from '@/lib/types';
+
+interface VendedoraBase {
+  id: string;
+  user_id: string;
+  loja_id: string;
+  archived: boolean;
+  created_at: string;
+}
+
+interface Vendedora {
+  id: string;
+  user_id: string;
+  loja_id: string;
+  archived: boolean;
+  created_at: string;
+  profile: {
+    user_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+  } | null;
+}
 import MalinhaActions from '@/components/MalinhaActions';
 import ClientesTab from '@/components/ClientesTab';
 
@@ -34,9 +56,9 @@ export default function LojaDashboard() {
   const [showAddVendedora, setShowAddVendedora] = useState(false);
   const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '' });
   const [creating, setCreating] = useState(false);
-  const [editVendedora, setEditVendedora] = useState<any | null>(null);
+  const [editVendedora, setEditVendedora] = useState<Vendedora | null>(null);
   const [editVendedoraForm, setEditVendedoraForm] = useState({ full_name: '', phone: '' });
-  const [deleteVendedora, setDeleteVendedora] = useState<any | null>(null);
+  const [deleteVendedora, setDeleteVendedora] = useState<Vendedora | null>(null);
 
   const { data: lojaId } = useQuery({
     queryKey: ['my-loja-id'],
@@ -60,11 +82,12 @@ export default function LojaDashboard() {
     queryFn: async () => {
       const { data: vendedorasData, error } = await supabase.from('vendedoras').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      const userIds = [...new Set((vendedorasData || []).map(v => v.user_id))];
+      const vendedorasTyped = (vendedorasData || []) as VendedoraBase[];
+      const userIds = [...new Set(vendedorasTyped.map(v => v.user_id))];
       if (userIds.length === 0) return [];
       const { data: profilesData } = await supabase.from('profiles').select('user_id, full_name, email, phone').in('user_id', userIds);
       const profileByUserId = new Map((profilesData || []).map(p => [p.user_id, p]));
-      return (vendedorasData || []).map(v => ({ ...v, profile: profileByUserId.get(v.user_id) || null }));
+      return vendedorasTyped.map(v => ({ ...v, profile: profileByUserId.get(v.user_id) || null }));
     },
   });
 
@@ -74,7 +97,7 @@ export default function LojaDashboard() {
     return m.client_name.toLowerCase().includes(q) || m.client_phone.includes(q);
   });
 
-  const vendedorasVisible = vendedoras.filter((v: any) => !!v.archived === showArchivedVendedoras);
+  const vendedorasVisible = vendedoras.filter((v) => !!v.archived === showArchivedVendedoras);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
   const handleCreateVendedora = async () => {
@@ -91,14 +114,15 @@ export default function LojaDashboard() {
       setVendedoraForm({ full_name: '', email: '', phone: '' });
       setShowAddVendedora(false);
       queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao criar vendedora');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar vendedora';
+      toast.error(errorMessage);
     } finally {
       setCreating(false);
     }
   };
 
-  const openEditVendedora = (v: any) => {
+  const openEditVendedora = (v: Vendedora) => {
     setEditVendedora(v);
     setEditVendedoraForm({ full_name: v.profile?.full_name || '', phone: v.profile?.phone || '' });
   };
@@ -113,7 +137,7 @@ export default function LojaDashboard() {
     queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
   };
 
-  const handleArchiveVendedora = async (v: any) => {
+  const handleArchiveVendedora = async (v: Vendedora) => {
     const { error } = await supabase.from('vendedoras').update({ archived: !v.archived }).eq('id', v.id);
     if (error) { toast.error('Erro ao arquivar vendedora'); return; }
     toast.success(v.archived ? 'Vendedora reativada!' : 'Vendedora arquivada!');
@@ -131,8 +155,8 @@ export default function LojaDashboard() {
   };
 
   const vendedorasForClientes = vendedoras
-    .filter((v: any) => !v.archived)
-    .map((v: any) => ({ user_id: v.user_id, name: v.profile?.full_name || v.profile?.email || 'Vendedora', loja_id: v.loja_id || lojaId || '' }));
+    .filter((v) => !v.archived)
+    .map((v) => ({ user_id: v.user_id, name: v.profile?.full_name || v.profile?.email || 'Vendedora', loja_id: v.loja_id || lojaId || '' }));
 
   const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
     { key: 'malinhas', label: 'Malinhas' },
@@ -222,7 +246,7 @@ export default function LojaDashboard() {
             {vendedorasVisible.length === 0 ? (
               <p className="text-center text-muted-foreground py-16">{showArchivedVendedoras ? 'Nenhuma vendedora arquivada.' : 'Nenhuma vendedora cadastrada.'}</p>
             ) : (
-              vendedorasVisible.map((v: any) => (
+              vendedorasVisible.map((v) => (
                 <div key={v.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${v.archived ? 'opacity-60' : ''}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

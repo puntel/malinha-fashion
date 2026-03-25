@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       .eq("user_id", caller.id);
     if (rolesErr) throw rolesErr;
     
-    const roles = (callerRoles || []).map((r: any) => r.role);
+    const roles = (callerRoles || []).map((r: { role: string }) => r.role);
     const isMaster = roles.includes("master");
     const isLoja = roles.includes("loja");
 
@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
       if (!isMaster) throw new Error("Forbidden: not master");
       const { user_email, new_password } = body;
       const { data: { users } } = await adminClient.auth.admin.listUsers();
-      const target = users?.find((u: any) => u.email === user_email);
+      const target = users?.find((u: { email: string; id: string }) => u.email === user_email);
       if (!target) throw new Error("User not found");
       const { error } = await adminClient.auth.admin.updateUserById(target.id, { password: new_password });
       if (error) throw error;

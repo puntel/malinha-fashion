@@ -42,7 +42,17 @@ export default function MalinhaResumo() {
 
   // Client edit
   const [editClientOpen, setEditClientOpen] = useState(false);
-  const [clientForm, setClientForm] = useState({ client_name: '', client_phone: '', client_cpf: '' });
+  const [clientForm, setClientForm] = useState({
+    client_name: '',
+    client_phone: '',
+    client_cpf: '',
+    client_address: '',
+    delivery_location: '',
+    collection_location: '',
+    total_pieces: '',
+    send_date: '',
+    return_date: ''
+  });
 
   // Product edit
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -86,6 +96,11 @@ export default function MalinhaResumo() {
   const products = malinha.malinha_products || [];
   const link = `${window.location.origin}/malinha/${malinha.id}`;
 
+  const clientObservations = products
+    .filter(p => p.client_note && p.client_note.trim())
+    .map(p => `${p.code}: ${p.client_note}`)
+    .join('\n');
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(link);
     setCopied(true);
@@ -102,7 +117,8 @@ export default function MalinhaResumo() {
   const handleFinalize = async () => {
     setFinalizing(true);
     try {
-      await updateMalinhaStatus(malinha.id, 'Finalizada', sellerNote);
+      const noteToSave = sellerNote.trim() || malinha.seller_note || '';
+      await updateMalinhaStatus(malinha.id, 'Finalizada', noteToSave);
       invalidate();
       toast.success('Malinha finalizada!');
     } catch (err) {
@@ -114,7 +130,17 @@ export default function MalinhaResumo() {
 
   // ─── Edit client ───────────────────────────────────────────
   const openEditClient = () => {
-    setClientForm({ client_name: malinha.client_name, client_phone: malinha.client_phone, client_cpf: malinha.client_cpf });
+    setClientForm({
+      client_name: malinha.client_name,
+      client_phone: malinha.client_phone,
+      client_cpf: malinha.client_cpf,
+      client_address: malinha.client_address || '',
+      delivery_location: malinha.delivery_location || '',
+      collection_location: malinha.collection_location || '',
+      total_pieces: malinha.total_pieces?.toString() || '',
+      send_date: malinha.send_date || '',
+      return_date: malinha.return_date || ''
+    });
     setEditClientOpen(true);
   };
 
@@ -127,8 +153,9 @@ export default function MalinhaResumo() {
       toast.success('Dados da cliente atualizados!');
       setEditClientOpen(false);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao atualizar');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -174,8 +201,9 @@ export default function MalinhaResumo() {
       setEditProductPhotoFile(null);
       setEditProductPhotoPreview('');
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao atualizar peça');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar peça';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -191,8 +219,9 @@ export default function MalinhaResumo() {
       toast.success('Peça removida!');
       setDeleteProduct(null);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao remover peça');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao remover peça';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -227,8 +256,9 @@ export default function MalinhaResumo() {
       toast.success('Peça adicionada!');
       setAddProductOpen(false);
       invalidate();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao adicionar peça');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao adicionar peça';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -338,6 +368,12 @@ export default function MalinhaResumo() {
           <div className="text-sm text-muted-foreground space-y-1">
             <p>📱 {malinha.client_phone}</p>
             <p>📋 {malinha.client_cpf}</p>
+            {malinha.client_address && <p>🏠 {malinha.client_address}</p>}
+            {malinha.delivery_location && <p>🚚 Entrega: {malinha.delivery_location}</p>}
+            {malinha.collection_location && <p>📥 Coleta: {malinha.collection_location}</p>}
+            {malinha.total_pieces && <p>📦 Total peças: {malinha.total_pieces}</p>}
+            {malinha.send_date && <p>📅 Envio: {new Date(malinha.send_date).toLocaleDateString('pt-BR')}</p>}
+            {malinha.return_date && <p>🔄 Retorno: {new Date(malinha.return_date).toLocaleDateString('pt-BR')}</p>}
             <p>📦 {products.length} {products.length === 1 ? 'peça' : 'peças'}</p>
             <p className="text-foreground font-medium">
               💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
@@ -394,20 +430,39 @@ export default function MalinhaResumo() {
         {(malinha.status === 'Pedido realizado' || malinha.status === 'Finalizada') && (
           <div className="rounded-xl border bg-card p-5 space-y-3">
             <h3 className="font-display text-sm font-medium">Observações da Vendedora</h3>
-            <Textarea
-              placeholder="Ex: Fechou 3 peças, pagamento no cartão 2x. Devolver 2 peças na sexta."
-              value={sellerNote || malinha.seller_note || ''}
-              onChange={e => setSellerNote(e.target.value)}
-              rows={3}
-              className="text-sm"
-              disabled={malinha.status === 'Finalizada'}
-            />
+            {malinha.status === 'Finalizada' ? (
+              <p className="text-sm text-foreground bg-muted/50 border border-muted rounded-lg p-3 min-h-[84px]">
+                {malinha.seller_note || 'Nenhuma observação.'}
+              </p>
+            ) : (
+              <Textarea
+                placeholder="Ex: Fechou 3 peças, pagamento no cartão 2x. Devolver 2 peças na sexta."
+                value={sellerNote || malinha.seller_note || ''}
+                onChange={e => setSellerNote(e.target.value)}
+                rows={3}
+                className="text-sm"
+              />
+            )}
             {malinha.status === 'Pedido realizado' && (
               <Button onClick={handleFinalize} className="w-full gap-2" size="lg" disabled={finalizing}>
                 {finalizing && <Loader2 className="h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="h-5 w-5" /> Finalizar Malinha
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Client observation */}
+        {clientObservations ? (
+          <div className="rounded-xl border bg-card p-5 space-y-3">
+            <h3 className="font-display text-sm font-medium">Observações do Cliente</h3>
+            <pre className="whitespace-pre-wrap text-sm text-foreground bg-muted/50 border border-muted rounded-lg p-3">
+              {clientObservations}
+            </pre>
+          </div>
+        ) : (
+          <div className="rounded-xl border bg-card p-5">
+            <p className="text-sm text-muted-foreground">Nenhuma observação do cliente.</p>
           </div>
         )}
 
@@ -442,6 +497,24 @@ export default function MalinhaResumo() {
             </div>
             <div className="space-y-1"><Label>CPF</Label>
               <Input value={clientForm.client_cpf} onChange={e => setClientForm(f => ({ ...f, client_cpf: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Endereço</Label>
+              <Input value={clientForm.client_address} onChange={e => setClientForm(f => ({ ...f, client_address: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Local de entrega</Label>
+              <Input value={clientForm.delivery_location} onChange={e => setClientForm(f => ({ ...f, delivery_location: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Local de coleta</Label>
+              <Input value={clientForm.collection_location} onChange={e => setClientForm(f => ({ ...f, collection_location: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Total de peças</Label>
+              <Input type="number" value={clientForm.total_pieces} onChange={e => setClientForm(f => ({ ...f, total_pieces: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Data de envio</Label>
+              <Input type="date" value={clientForm.send_date} onChange={e => setClientForm(f => ({ ...f, send_date: e.target.value }))} />
+            </div>
+            <div className="space-y-1"><Label>Data de retorno</Label>
+              <Input type="date" value={clientForm.return_date} onChange={e => setClientForm(f => ({ ...f, return_date: e.target.value }))} />
             </div>
             <Button type="submit" className="w-full" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Salvar

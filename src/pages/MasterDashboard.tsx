@@ -13,6 +13,37 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { LogOut, Search, Store, Loader2, Plus, Users, UserPlus, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Malinha } from '@/lib/types';
+
+interface VendedoraBase {
+  id: string;
+  user_id: string;
+  loja_id: string;
+  archived: boolean;
+  created_at: string;
+}
+
+interface Loja {
+  id: string;
+  name: string;
+  phone: string;
+  cnpj: string;
+  archived: boolean;
+  created_at: string;
+}
+
+interface Vendedora {
+  id: string;
+  user_id: string;
+  loja_id: string;
+  archived: boolean;
+  created_at: string;
+  profile: {
+    user_id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+  } | null;
+}
 import MalinhaActions from '@/components/MalinhaActions';
 import ClientesTab from '@/components/ClientesTab';
 
@@ -37,10 +68,10 @@ export default function MasterDashboard() {
   // Dialogs
   const [lojaDialogOpen, setLojaDialogOpen] = useState(false);
   const [vendedoraDialogOpen, setVendedoraDialogOpen] = useState(false);
-  const [editLoja, setEditLoja] = useState<any | null>(null);
-  const [editVendedora, setEditVendedora] = useState<any | null>(null);
-  const [deleteLoja, setDeleteLoja] = useState<any | null>(null);
-  const [deleteVendedora, setDeleteVendedora] = useState<any | null>(null);
+  const [editLoja, setEditLoja] = useState<Loja | null>(null);
+  const [editVendedora, setEditVendedora] = useState<Vendedora | null>(null);
+  const [deleteLoja, setDeleteLoja] = useState<Loja | null>(null);
+  const [deleteVendedora, setDeleteVendedora] = useState<Vendedora | null>(null);
 
   // Forms
   const [lojaForm, setLojaForm] = useState({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
@@ -62,7 +93,7 @@ export default function MasterDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.from('lojas').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data as Loja[]) || [];
     },
   });
 
@@ -71,17 +102,18 @@ export default function MasterDashboard() {
     queryFn: async () => {
       const { data: vendedorasData, error: vendedorasError } = await supabase.from('vendedoras').select('*').order('created_at', { ascending: false });
       if (vendedorasError) throw vendedorasError;
+      const vendedorasTyped = (vendedorasData || []) as VendedoraBase[];
 
-      const userIds = [...new Set((vendedorasData || []).map(v => v.user_id))];
-      const lojaIds = [...new Set((vendedorasData || []).map(v => v.loja_id))];
+      const userIds = [...new Set(vendedorasTyped.map(v => v.user_id))];
+      const lojaIds = [...new Set(vendedorasTyped.map(v => v.loja_id))];
 
-      let profilesData: any[] = [];
+      let profilesData: unknown[] = [];
       if (userIds.length > 0) {
         const { data } = await supabase.from('profiles').select('user_id, full_name, email, phone').in('user_id', userIds);
         profilesData = data || [];
       }
 
-      let lojasData: any[] = [];
+      let lojasData: unknown[] = [];
       if (lojaIds.length > 0) {
         const { data } = await supabase.from('lojas').select('id, name').in('id', lojaIds);
         lojasData = data || [];
@@ -90,7 +122,7 @@ export default function MasterDashboard() {
       const profileByUserId = new Map(profilesData.map(p => [p.user_id, p]));
       const lojaById = new Map(lojasData.map(l => [l.id, l]));
 
-      return (vendedorasData || []).map(v => ({
+      return vendedorasTyped.map(v => ({
         ...v,
         profile: profileByUserId.get(v.user_id) || null,
         loja: lojaById.get(v.loja_id) || null,
@@ -105,8 +137,9 @@ export default function MasterDashboard() {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    onSuccess: data => {
-      toast.success(`Loja criada! Senha temporária: ${data?.temporary_password || 'A1b2c3'}`);
+    onSuccess: (data: unknown) => {
+      const tempPassword = (data as { temporary_password?: string })?.temporary_password || 'A1b2c3';
+      toast.success(`Loja criada! Senha temporária: ${tempPassword}`);
       setLojaDialogOpen(false);
       setLojaForm({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
@@ -121,8 +154,9 @@ export default function MasterDashboard() {
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
     },
-    onSuccess: data => {
-      toast.success(`Vendedora criada! Senha temporária: ${data?.temporary_password || 'A1b2c3'}`);
+    onSuccess: (data: unknown) => {
+      const tempPassword = (data as { temporary_password?: string })?.temporary_password || 'A1b2c3';
+      toast.success(`Vendedora criada! Senha temporária: ${tempPassword}`);
       setVendedoraDialogOpen(false);
       setVendedoraForm({ full_name: '', email: '', phone: '', loja_id: '' });
       queryClient.invalidateQueries({ queryKey: ['master-vendedoras'] });
@@ -130,7 +164,7 @@ export default function MasterDashboard() {
     onError: (err: Error) => toast.error(`Erro ao criar vendedora: ${err.message}`),
   });
 
-  const openEditLoja = (l: any) => {
+  const openEditLoja = (l: Loja) => {
     setEditLoja(l);
     setEditLojaForm({ name: l.name, phone: l.phone || '', cnpj: l.cnpj || '' });
   };
@@ -145,7 +179,7 @@ export default function MasterDashboard() {
     queryClient.invalidateQueries({ queryKey: ['lojas'] });
   };
 
-  const handleArchiveLoja = async (l: any) => {
+  const handleArchiveLoja = async (l: Loja) => {
     const { error } = await supabase.from('lojas').update({ archived: !l.archived }).eq('id', l.id);
     if (error) { toast.error('Erro ao arquivar loja'); return; }
     toast.success(l.archived ? 'Loja reativada!' : 'Loja arquivada!');
@@ -162,7 +196,7 @@ export default function MasterDashboard() {
     queryClient.invalidateQueries({ queryKey: ['master-vendedoras'] });
   };
 
-  const openEditVendedora = (v: any) => {
+  const openEditVendedora = (v: Vendedora) => {
     setEditVendedora(v);
     setEditVendedoraForm({ full_name: v.profile?.full_name || '', phone: v.profile?.phone || '' });
   };
@@ -177,7 +211,7 @@ export default function MasterDashboard() {
     queryClient.invalidateQueries({ queryKey: ['master-vendedoras'] });
   };
 
-  const handleArchiveVendedora = async (v: any) => {
+  const handleArchiveVendedora = async (v: Vendedora) => {
     const { error } = await supabase.from('vendedoras').update({ archived: !v.archived }).eq('id', v.id);
     if (error) { toast.error('Erro ao arquivar vendedora'); return; }
     toast.success(v.archived ? 'Vendedora reativada!' : 'Vendedora arquivada!');
@@ -200,13 +234,13 @@ export default function MasterDashboard() {
     return m.client_name.toLowerCase().includes(q) || m.client_phone.includes(q);
   });
 
-  const lojasVisible = lojas.filter((l: any) => !!l.archived === showArchivedLojas);
-  const vendedorasVisible = vendedoras.filter((v: any) => !!v.archived === showArchivedVendedoras);
+  const lojasVisible = lojas.filter((l) => !!l.archived === showArchivedLojas);
+  const vendedorasVisible = vendedoras.filter((v) => !!v.archived === showArchivedVendedoras);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
   const allVendedorasForClientes = vendedoras
-    .filter((v: any) => !v.archived)
-    .map((v: any) => ({ user_id: v.user_id, name: v.profile?.full_name || v.profile?.email || 'Vendedora', loja_id: v.loja_id }));
+    .filter((v) => !v.archived)
+    .map((v) => ({ user_id: v.user_id, name: v.profile?.full_name || v.profile?.email || 'Vendedora', loja_id: v.loja_id }));
 
   const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
     { key: 'malinhas', label: 'Malinhas' },
@@ -301,7 +335,7 @@ export default function MasterDashboard() {
             {lojasVisible.length === 0 ? (
               <p className="text-center text-muted-foreground py-16">{showArchivedLojas ? 'Nenhuma loja arquivada.' : 'Nenhuma loja cadastrada.'}</p>
             ) : (
-              lojasVisible.map((l: any) => (
+              lojasVisible.map((l) => (
                 <div key={l.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${l.archived ? 'opacity-60' : ''}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -347,7 +381,7 @@ export default function MasterDashboard() {
                       <Label>Loja *</Label>
                       <Select value={vendedoraForm.loja_id} onValueChange={v => setVendedoraForm(f => ({ ...f, loja_id: v }))}>
                         <SelectTrigger><SelectValue placeholder="Selecione a loja" /></SelectTrigger>
-                        <SelectContent>{lojas.filter((l: any) => !l.archived).map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>{lojas.filter((l) => !l.archived).map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <p className="text-xs text-muted-foreground">A senha é gerada automaticamente.</p>
@@ -363,7 +397,7 @@ export default function MasterDashboard() {
             {vendedorasVisible.length === 0 ? (
               <p className="text-center text-muted-foreground py-16">{showArchivedVendedoras ? 'Nenhuma vendedora arquivada.' : 'Nenhuma vendedora cadastrada.'}</p>
             ) : (
-              vendedorasVisible.map((v: any) => (
+              vendedorasVisible.map((v) => (
                 <div key={v.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${v.archived ? 'opacity-60' : ''}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

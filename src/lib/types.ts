@@ -19,6 +19,12 @@ export interface Malinha {
   client_name: string;
   client_cpf: string;
   client_phone: string;
+  client_address?: string;
+  delivery_location?: string;
+  collection_location?: string;
+  total_pieces?: number;
+  send_date?: string;
+  return_date?: string;
   status: MalinhaStatus;
   seller_name: string;
   seller_note?: string | null;
