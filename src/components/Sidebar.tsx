@@ -30,7 +30,7 @@ export default function Sidebar() {
     { title: 'Clientes', icon: UserRound, path: '/clientes', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Produtos', icon: Warehouse, path: '/produtos', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Vendas', icon: ShoppingCart, path: '/vendas', roles: ['master', 'loja', 'vendedora'] },
-    { title: 'Consignado', icon: Package, path: '/dashboard', roles: ['master', 'loja', 'vendedora'] },
+    { title: 'Consignado', icon: Package, path: role === 'master' ? '/master' : role === 'loja' ? '/loja' : '/vendedora', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Relatórios', icon: BarChart3, path: '/relatorios', roles: ['master', 'loja', 'vendedora'] },
   ];
 
@@ -39,9 +39,9 @@ export default function Sidebar() {
   ];
 
   const managementItems = [
-    { title: 'Lojas', icon: Store, path: '/master?tab=lojas', roles: ['master'] },
-    { title: 'Vendedoras', icon: Users, path: role === 'master' ? '/master?tab=vendedoras' : '/loja?tab=vendedoras', roles: ['master', 'loja'] },
-    { title: 'Administradores', icon: ShieldCheck, path: '/master?tab=admins', roles: ['master'] },
+    { title: 'Lojas', icon: Store, path: '/lojas', roles: ['master'] },
+    { title: 'Vendedoras', icon: Users, path: '/vendedoras', roles: ['master', 'loja'] },
+    { title: 'Administradores', icon: ShieldCheck, path: '/admins', roles: ['master'] },
   ];
 
   // Extra items for Master/Loja if needed, but keeping it simple for now as requested.

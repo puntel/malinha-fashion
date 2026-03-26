@@ -15,7 +15,8 @@ export default function RoleDashboardRedirect() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-
-  // All users now land on Relatorios as requested
-  return <Navigate to="/relatorios" replace />;
+  
+  if (role === 'master') return <Navigate to="/master" replace />;
+  if (role === 'loja') return <Navigate to="/loja" replace />;
+  return <Navigate to="/vendedora" replace />;
 }
