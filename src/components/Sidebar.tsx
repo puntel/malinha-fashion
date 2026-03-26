@@ -40,7 +40,7 @@ export default function Sidebar() {
 
   const managementItems = [
     { title: 'Lojas', icon: Store, path: '/master?tab=lojas', roles: ['master'] },
-    { title: 'Vendedoras', icon: Users, path: '/master?tab=vendedoras', roles: ['master', 'loja'] },
+    { title: 'Vendedoras', icon: Users, path: role === 'master' ? '/master?tab=vendedoras' : '/loja?tab=vendedoras', roles: ['master', 'loja'] },
     { title: 'Administradores', icon: ShieldCheck, path: '/master?tab=admins', roles: ['master'] },
   ];
 
