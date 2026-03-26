@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,8 +29,25 @@ export default function MasterDashboard() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as Tab) || 'malinhas';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<Tab>('malinhas');
+  
+  // Sync tab state with search params
+  useEffect(() => {
+    const currentTab = searchParams.get('tab') as Tab;
+    if (currentTab && currentTab !== tab) {
+      setTab(currentTab);
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes internally
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
+
   const [showArchivedLojas, setShowArchivedLojas] = useState(false);
   const [showArchivedVendedoras, setShowArchivedVendedoras] = useState(false);
 
@@ -288,10 +305,8 @@ export default function MasterDashboard() {
 
   const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
     { key: 'malinhas', label: 'Malinhas' },
-    { key: 'lojas', label: 'Lojas', icon: <Store className="h-4 w-4" /> },
     { key: 'vendedoras', label: 'Vendedoras', icon: <Users className="h-4 w-4" /> },
     { key: 'clientes', label: 'Clientes', icon: <UserRound className="h-4 w-4" /> },
-    { key: 'admins', label: 'Admins', icon: <ShieldCheck className="h-4 w-4" /> },
   ];
 
   return (
@@ -310,7 +325,7 @@ export default function MasterDashboard() {
         {/* Tabs */}
         <div className="flex gap-2 mb-4 flex-wrap">
           {tabs.map(t => (
-            <Button key={t.key} variant={tab === t.key ? 'default' : 'outline'} size="sm" onClick={() => setTab(t.key)} className="gap-1.5">
+            <Button key={t.key} variant={tab === t.key ? 'default' : 'outline'} size="sm" onClick={() => handleTabChange(t.key)} className="gap-1.5">
               {t.icon}{t.label}
             </Button>
           ))}

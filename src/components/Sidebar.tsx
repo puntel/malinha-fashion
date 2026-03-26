@@ -7,6 +7,7 @@ import {
   BarChart3, 
   Users, 
   ShieldCheck, 
+  Store,
   LogOut,
   Menu,
   X,
@@ -28,6 +29,11 @@ export default function Sidebar() {
     { title: 'Vendas', icon: ShoppingCart, path: '/vendas', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Consignado', icon: Package, path: '/dashboard', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Relatórios', icon: BarChart3, path: '/relatorios', roles: ['master', 'loja', 'vendedora'] },
+  ];
+
+  const managementItems = [
+    { title: 'Lojas', icon: Store, path: '/master?tab=lojas', roles: ['master'] },
+    { title: 'Administradores', icon: ShieldCheck, path: '/master?tab=admins', roles: ['master'] },
   ];
 
   // Extra items for Master/Loja if needed, but keeping it simple for now as requested.
@@ -105,6 +111,29 @@ export default function Sidebar() {
                 )}
               </NavLink>
             ))}
+
+            {role === 'master' && (
+              <div className="pt-4 pb-2">
+                {!isCollapsed && <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gestão</p>}
+                {managementItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group",
+                      isActive 
+                        ? "bg-primary text-primary-foreground shadow-sm" 
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      isCollapsed && "justify-center px-0"
+                    )}
+                  >
+                    <item.icon className={cn("h-5 w-5", isCollapsed ? "h-6 w-6" : "")} />
+                    {!isCollapsed && <span className="font-medium">{item.title}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            )}
           </nav>
 
           {/* Bottom Actions */}
