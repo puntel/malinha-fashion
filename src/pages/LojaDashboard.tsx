@@ -1,41 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, Search, Plus, Loader2, Users, UserPlus, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2, UserRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { LogOut, Search, Plus, Loader2 } from 'lucide-react';
 import type { Malinha } from '@/lib/types';
-
-interface VendedoraBase {
-  id: string;
-  user_id: string;
-  loja_id: string;
-  archived: boolean;
-  created_at: string;
-}
-
-interface Vendedora {
-  id: string;
-  user_id: string;
-  loja_id: string;
-  archived: boolean;
-  created_at: string;
-  profile: {
-    user_id: string;
-    full_name: string;
-    email: string;
-    phone: string;
-  } | null;
-}
 import MalinhaActions from '@/components/MalinhaActions';
-import ClientesTab from '@/components/ClientesTab';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -44,29 +17,10 @@ const statusColors: Record<string, string> = {
   'Finalizada': 'bg-success text-success-foreground',
 };
 
-type Tab = 'malinhas';
-
 export default function LojaDashboard() {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
-  const queryClient = useQueryClient();
+  const { signOut } = useAuth();
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<Tab>('malinhas');
-  const [showArchivedVendedoras, setShowArchivedVendedoras] = useState(false);
-  const [showAddVendedora, setShowAddVendedora] = useState(false);
-  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '' });
-  const [creating, setCreating] = useState(false);
-  const [editVendedora, setEditVendedora] = useState<Vendedora | null>(null);
-  const [editVendedoraForm, setEditVendedoraForm] = useState({ full_name: '', phone: '' });
-  const [deleteVendedora, setDeleteVendedora] = useState<Vendedora | null>(null);
-
-  const { data: lojaId } = useQuery({
-    queryKey: ['my-loja-id'],
-    queryFn: async () => {
-      const { data } = await supabase.from('loja_members').select('loja_id').single();
-      return data?.loja_id || null;
-    },
-  });
 
   const { data: malinhas = [], isLoading } = useQuery({
     queryKey: ['loja-malinhas'],
@@ -77,93 +31,16 @@ export default function LojaDashboard() {
     },
   });
 
-  const { data: vendedoras = [] } = useQuery({
-    queryKey: ['loja-vendedoras'],
-    queryFn: async () => {
-      const { data: vendedorasData, error } = await supabase.from('vendedoras').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      const vendedorasTyped = (vendedorasData || []) as VendedoraBase[];
-      const userIds = [...new Set(vendedorasTyped.map(v => v.user_id))];
-      if (userIds.length === 0) return [];
-      const { data: profilesData } = await supabase.from('profiles').select('user_id, full_name, email, phone').in('user_id', userIds);
-      const profileByUserId = new Map((profilesData || []).map(p => [p.user_id, p]));
-      return vendedorasTyped.map(v => ({ ...v, profile: profileByUserId.get(v.user_id) || null }));
-    },
-  });
-
   const filtered = malinhas.filter(m => {
     if (!search) return true;
     const q = search.toLowerCase();
     return m.client_name.toLowerCase().includes(q) || m.client_phone.includes(q);
   });
 
-  const vendedorasVisible = vendedoras.filter((v) => !!v.archived === showArchivedVendedoras);
   const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
-  const handleCreateVendedora = async () => {
-    if (!vendedoraForm.full_name.trim() || !vendedoraForm.email.trim()) { toast.error('Preencha nome e e-mail'); return; }
-    if (!lojaId) { toast.error('Loja não encontrada'); return; }
-    setCreating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'create_vendedora', email: vendedoraForm.email.trim(), full_name: vendedoraForm.full_name.trim(), phone: vendedoraForm.phone.trim() || null, loja_id: lojaId },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success('Vendedora criada com sucesso!');
-      setVendedoraForm({ full_name: '', email: '', phone: '' });
-      setShowAddVendedora(false);
-      queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao criar vendedora';
-      toast.error(errorMessage);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const openEditVendedora = (v: Vendedora) => {
-    setEditVendedora(v);
-    setEditVendedoraForm({ full_name: v.profile?.full_name || '', phone: v.profile?.phone || '' });
-  };
-
-  const handleEditVendedora = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editVendedora) return;
-    const { error } = await supabase.from('profiles').update({ full_name: editVendedoraForm.full_name, phone: editVendedoraForm.phone || null }).eq('user_id', editVendedora.user_id);
-    if (error) { toast.error('Erro ao editar vendedora'); return; }
-    toast.success('Vendedora atualizada!');
-    setEditVendedora(null);
-    queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
-  };
-
-  const handleArchiveVendedora = async (v: Vendedora) => {
-    const { error } = await supabase.from('vendedoras').update({ archived: !v.archived }).eq('id', v.id);
-    if (error) { toast.error('Erro ao arquivar vendedora'); return; }
-    toast.success(v.archived ? 'Vendedora reativada!' : 'Vendedora arquivada!');
-    queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
-  };
-
-  const handleDeleteVendedora = async () => {
-    if (!deleteVendedora) return;
-    await supabase.from('user_roles').delete().eq('user_id', deleteVendedora.user_id);
-    const { error } = await supabase.from('vendedoras').delete().eq('id', deleteVendedora.id);
-    if (error) { toast.error('Erro ao excluir vendedora'); return; }
-    toast.success('Vendedora removida!');
-    setDeleteVendedora(null);
-    queryClient.invalidateQueries({ queryKey: ['loja-vendedoras'] });
-  };
-
-  const vendedorasForClientes = vendedoras
-    .filter((v) => !v.archived)
-    .map((v) => ({ user_id: v.user_id, name: v.profile?.full_name || v.profile?.email || 'Vendedora', loja_id: v.loja_id || lojaId || '' }));
-
-  const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
-    { key: 'malinhas', label: 'Malinhas' },
-  ];
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <div>
@@ -174,21 +51,28 @@ export default function LojaDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pb-24 pt-4">
-        <div className="relative mb-4">
+      <main className="mx-auto max-w-2xl px-4 pt-6">
+        <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input 
+            placeholder="Buscar por nome ou telefone..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            className="pl-9 h-11" 
+          />
         </div>
 
         {isLoading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-20">Nenhuma malinha encontrada.</p>
+          <div className="text-center py-20 border-2 border-dashed rounded-xl">
+            <p className="text-muted-foreground">Nenhuma malinha encontrada.</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {filtered.map(m => (
-              <div key={m.id} className="relative w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md">
-                <button onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full text-left active:scale-[0.98]">
+              <div key={m.id} className="relative w-full rounded-xl border bg-card p-4 transition-all hover:shadow-md">
+                <button onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full text-left active:scale-[0.99]">
                   <div className="flex items-start justify-between gap-2 pr-8">
                     <div className="min-w-0">
                       <p className="font-medium text-foreground truncate">{m.client_name}</p>
@@ -198,45 +82,20 @@ export default function LojaDashboard() {
                     <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
                   </div>
                 </button>
-                <div className="absolute top-3 right-3"><MalinhaActions malinha={m} /></div>
+                <div className="absolute top-3 right-3">
+                  <MalinhaActions malinha={m} />
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
 
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center">
-        <Button onClick={() => navigate('/nova-malinha')} size="lg" className="rounded-full shadow-lg px-6 gap-2">
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4">
+        <Button onClick={() => navigate('/nova-malinha')} size="lg" className="rounded-full shadow-lg px-8 gap-2 h-12">
           <Plus className="h-5 w-5" /> Nova Malinha
         </Button>
       </div>
-
-      {/* Edit Vendedora Dialog */}
-      <Dialog open={!!editVendedora} onOpenChange={open => { if (!open) setEditVendedora(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Editar Vendedora</DialogTitle></DialogHeader>
-          <form onSubmit={handleEditVendedora} className="space-y-3">
-            <div className="space-y-1"><Label>Nome completo *</Label><Input value={editVendedoraForm.full_name} onChange={e => setEditVendedoraForm(f => ({ ...f, full_name: e.target.value }))} required /></div>
-            <div className="space-y-1"><Label>Telefone</Label><Input value={editVendedoraForm.phone} onChange={e => setEditVendedoraForm(f => ({ ...f, phone: e.target.value }))} /></div>
-            <Button type="submit" className="w-full">Salvar</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Vendedora Confirmation */}
-      <Dialog open={!!deleteVendedora} onOpenChange={open => { if (!open) setDeleteVendedora(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir Vendedora</DialogTitle>
-            <DialogDescription>Tem certeza que deseja remover <strong>{deleteVendedora?.profile?.full_name}</strong>? A conta de login será mantida, mas o acesso será revogado.</DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" onClick={() => setDeleteVendedora(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDeleteVendedora}>Excluir</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
-```

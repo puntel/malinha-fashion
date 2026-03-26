@@ -23,6 +23,9 @@ import Produtos from "./pages/Produtos";
 import Relatorios from "./pages/Relatorios";
 import Templates from './pages/Templates';
 import Clientes from './pages/Clientes';
+import Lojas from './pages/Lojas';
+import Vendedoras from './pages/Vendedoras';
+import Admins from './pages/Admins';
 import MainLayout from "@/components/MainLayout";
 
 const queryClient = new QueryClient();
@@ -102,6 +105,11 @@ const App = () => (
             <Route path="/clientes" element={<ProtectedRoute allowedRoles={['master', 'loja', 'vendedora']}><MainLayout><Clientes /></MainLayout></ProtectedRoute>} />
             <Route path="/relatorios" element={<ProtectedRoute allowedRoles={['master', 'loja', 'vendedora']}><MainLayout><Relatorios /></MainLayout></ProtectedRoute>} />
             <Route path="/modelos" element={<ProtectedRoute allowedRoles={['master', 'loja', 'vendedora']}><MainLayout><Templates /></MainLayout></ProtectedRoute>} />
+            
+            {/* Gestão Routes */}
+            <Route path="/lojas" element={<ProtectedRoute allowedRoles={['master']}><MainLayout><Lojas /></MainLayout></ProtectedRoute>} />
+            <Route path="/vendedoras" element={<ProtectedRoute allowedRoles={['master', 'loja']}><MainLayout><Vendedoras /></MainLayout></ProtectedRoute>} />
+            <Route path="/admins" element={<ProtectedRoute allowedRoles={['master']}><MainLayout><Admins /></MainLayout></ProtectedRoute>} />
 
             {/* Shared authenticated routes */}
             <Route path="/nova-malinha" element={
