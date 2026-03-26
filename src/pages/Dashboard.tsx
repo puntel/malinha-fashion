@@ -16,7 +16,7 @@ const statusColors: Record<string, string> = {
   'Finalizada': 'bg-success text-success-foreground',
 };
 
-type Tab = 'malinhas' | 'clientes';
+type Tab = 'malinhas';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -61,57 +61,33 @@ export default function Dashboard() {
       </header>
 
       <main className="mx-auto max-w-lg px-4 pb-24 pt-4">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <Button variant={tab === 'malinhas' ? 'default' : 'outline'} size="sm" onClick={() => setTab('malinhas')} className="gap-1.5">
-            <Package className="h-4 w-4" /> Malinhas
-          </Button>
-          <Button variant={tab === 'clientes' ? 'default' : 'outline'} size="sm" onClick={() => setTab('clientes')} className="gap-1.5">
-            <UserRound className="h-4 w-4" /> Clientes
-          </Button>
-        </div>
-
-        {/* ─── Malinhas Tab ─── */}
-        {tab === 'malinhas' && (
-          isLoading ? (
-            <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-          ) : malinhas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
-              <p className="text-muted-foreground">Nenhuma malinha criada ainda.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {malinhas.map((m: Malinha) => (
-                <button
-                  key={m.id}
-                  onClick={() => navigate(`/malinha/${m.id}/resumo`)}
-                  className="w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md active:scale-[0.98]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">{m.client_name}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDate(m.created_at)} · {m.malinha_products?.length || 0} {(m.malinha_products?.length || 0) === 1 ? 'peça' : 'peças'}
-                      </p>
-                    </div>
-                    <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
+        {isLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        ) : malinhas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
+            <p className="text-muted-foreground">Nenhuma malinha criada ainda.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {malinhas.map((m: Malinha) => (
+              <button
+                key={m.id}
+                onClick={() => navigate(`/malinha/${m.id}/resumo`)}
+                className="w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md active:scale-[0.98]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground truncate">{m.client_name}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {formatDate(m.created_at)} · {m.malinha_products?.length || 0} {(m.malinha_products?.length || 0) === 1 ? 'peça' : 'peças'}
+                    </p>
                   </div>
-                </button>
-              ))}
-            </div>
-          )
-        )}
-
-        {/* ─── Clientes Tab ─── */}
-        {tab === 'clientes' && user && (
-          <ClientesTab
-            role="vendedora"
-            filterVendedoraId={user.id}
-            defaultVendedoraId={user.id}
-            defaultLojaId={myVendedoraInfo?.loja_id || undefined}
-            canCreate={true}
-          />
+                  <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </main>
 

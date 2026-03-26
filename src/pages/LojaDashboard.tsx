@@ -44,7 +44,7 @@ const statusColors: Record<string, string> = {
   'Finalizada': 'bg-success text-success-foreground',
 };
 
-type Tab = 'malinhas' | 'vendedoras' | 'clientes';
+type Tab = 'malinhas';
 
 export default function LojaDashboard() {
   const navigate = useNavigate();
@@ -160,8 +160,6 @@ export default function LojaDashboard() {
 
   const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
     { key: 'malinhas', label: 'Malinhas' },
-    { key: 'vendedoras', label: 'Vendedoras', icon: <Users className="h-4 w-4" /> },
-    { key: 'clientes', label: 'Clientes', icon: <UserRound className="h-4 w-4" /> },
   ];
 
   return (
@@ -177,112 +175,33 @@ export default function LojaDashboard() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pb-24 pt-4">
-        <div className="flex gap-2 mb-4 flex-wrap">
-          {tabs.map(t => (
-            <Button key={t.key} variant={tab === t.key ? 'default' : 'outline'} size="sm" onClick={() => setTab(t.key)} className="gap-1.5">
-              {t.icon}{t.label}
-            </Button>
-          ))}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
 
-        {/* ─── Malinhas Tab ─── */}
-        {tab === 'malinhas' && (
-          <>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-            </div>
-            {isLoading ? (
-              <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-            ) : filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground py-20">Nenhuma malinha encontrada.</p>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map(m => (
-                  <div key={m.id} className="relative w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md">
-                    <button onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full text-left active:scale-[0.98]">
-                      <div className="flex items-start justify-between gap-2 pr-8">
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground truncate">{m.client_name}</p>
-                          <p className="text-xs text-muted-foreground">Vendedora: {m.seller_name}</p>
-                          <p className="text-sm text-muted-foreground mt-0.5">{formatDate(m.created_at)} · {m.malinha_products?.length || 0} peças</p>
-                        </div>
-                        <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
-                      </div>
-                    </button>
-                    <div className="absolute top-3 right-3"><MalinhaActions malinha={m} /></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ─── Vendedoras Tab ─── */}
-        {tab === 'vendedoras' && (
+        {isLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-muted-foreground py-20">Nenhuma malinha encontrada.</p>
+        ) : (
           <div className="space-y-3">
-            <div className="flex gap-2">
-              <Dialog open={showAddVendedora} onOpenChange={setShowAddVendedora}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="flex-1 gap-2"><UserPlus className="h-4 w-4" /> Adicionar Vendedora</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Nova Vendedora</DialogTitle></DialogHeader>
-                  <div className="space-y-4 pt-2">
-                    <div className="space-y-2"><Label>Nome completo *</Label><Input value={vendedoraForm.full_name} onChange={e => setVendedoraForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Nome da vendedora" /></div>
-                    <div className="space-y-2"><Label>E-mail *</Label><Input type="email" value={vendedoraForm.email} onChange={e => setVendedoraForm(f => ({ ...f, email: e.target.value }))} placeholder="email@exemplo.com" /></div>
-                    <div className="space-y-2"><Label>Telefone</Label><Input value={vendedoraForm.phone} onChange={e => setVendedoraForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" /></div>
-                    <Button onClick={handleCreateVendedora} disabled={creating} className="w-full">
-                      {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Criar Vendedora
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Button variant={showArchivedVendedoras ? 'default' : 'outline'} size="sm" onClick={() => setShowArchivedVendedoras(s => !s)} className="gap-1.5">
-                <Archive className="h-4 w-4" />{showArchivedVendedoras ? 'Ativas' : 'Arquivadas'}
-              </Button>
-            </div>
-
-            {vendedorasVisible.length === 0 ? (
-              <p className="text-center text-muted-foreground py-16">{showArchivedVendedoras ? 'Nenhuma vendedora arquivada.' : 'Nenhuma vendedora cadastrada.'}</p>
-            ) : (
-              vendedorasVisible.map((v) => (
-                <div key={v.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${v.archived ? 'opacity-60' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground truncate">{v.profile?.full_name || 'Sem nome'}</p>
-                      {v.archived && <Badge variant="outline" className="text-xs shrink-0">Arquivada</Badge>}
+            {filtered.map(m => (
+              <div key={m.id} className="relative w-full rounded-xl border bg-card p-4 text-left transition-all hover:shadow-md">
+                <button onClick={() => navigate(`/malinha/${m.id}/resumo`)} className="w-full text-left active:scale-[0.98]">
+                  <div className="flex items-start justify-between gap-2 pr-8">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">{m.client_name}</p>
+                      <p className="text-xs text-muted-foreground">Vendedora: {m.seller_name}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{formatDate(m.created_at)} · {m.malinha_products?.length || 0} peças</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
-                    {v.profile?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profile.phone}</p>}
+                    <Badge className={`shrink-0 text-xs font-medium ${statusColors[m.status]}`}>{m.status}</Badge>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditVendedora(v)}><Pencil className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchiveVendedora(v)}>
-                        {v.archived ? <><ArchiveRestore className="h-4 w-4 mr-2" /> Reativar</> : <><Archive className="h-4 w-4 mr-2" /> Arquivar</>}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeleteVendedora(v)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))
-            )}
+                </button>
+                <div className="absolute top-3 right-3"><MalinhaActions malinha={m} /></div>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* ─── Clientes Tab ─── */}
-        {tab === 'clientes' && (
-          <ClientesTab
-            role="loja"
-            filterLojaId={lojaId || undefined}
-            defaultLojaId={lojaId || undefined}
-            canCreate={true}
-            availableVendedoras={vendedorasForClientes}
-          />
         )}
       </main>
 
@@ -320,3 +239,4 @@ export default function LojaDashboard() {
     </div>
   );
 }
+```

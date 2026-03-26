@@ -23,7 +23,7 @@ const statusColors: Record<string, string> = {
   'Finalizada': 'bg-success text-success-foreground',
 };
 
-type Tab = 'malinhas' | 'lojas' | 'vendedoras' | 'clientes' | 'admins';
+type Tab = 'malinhas' | 'lojas' | 'admins';
 
 export default function MasterDashboard() {
   const navigate = useNavigate();
@@ -305,8 +305,6 @@ export default function MasterDashboard() {
 
   const tabs: { key: Tab; label: string; icon?: React.ReactNode }[] = [
     { key: 'malinhas', label: 'Malinhas' },
-    { key: 'vendedoras', label: 'Vendedoras', icon: <Users className="h-4 w-4" /> },
-    { key: 'clientes', label: 'Clientes', icon: <UserRound className="h-4 w-4" /> },
   ];
 
   return (
@@ -322,25 +320,16 @@ export default function MasterDashboard() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pb-24 pt-4">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4 flex-wrap">
-          {tabs.map(t => (
-            <Button key={t.key} variant={tab === t.key ? 'default' : 'outline'} size="sm" onClick={() => handleTabChange(t.key)} className="gap-1.5">
-              {t.icon}{t.label}
-            </Button>
-          ))}
-        </div>
-
-        {/* ─── Malinhas Tab ─── */}
-        {tab === 'malinhas' && (
+        {isLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        ) : (
           <>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
-            {isLoading ? (
-              <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-            ) : filtered.length === 0 ? (
+
+            {filtered.length === 0 ? (
               <p className="text-center text-muted-foreground py-20">Nenhuma malinha encontrada.</p>
             ) : (
               <div className="space-y-3">
@@ -362,189 +351,6 @@ export default function MasterDashboard() {
               </div>
             )}
           </>
-        )}
-
-        {/* ─── Lojas Tab ─── */}
-        {tab === 'lojas' && (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Dialog open={lojaDialogOpen} onOpenChange={setLojaDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex-1 gap-2" variant="outline"><Plus className="h-4 w-4" /> Adicionar Loja</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Nova Loja</DialogTitle></DialogHeader>
-                  <form onSubmit={e => { e.preventDefault(); createLojaMutation.mutate(); }} className="space-y-3">
-                    <div className="space-y-1"><Label>Nome da Loja *</Label><Input value={lojaForm.loja_name} onChange={e => setLojaForm(f => ({ ...f, loja_name: e.target.value }))} required /></div>
-                    <div className="space-y-1"><Label>Telefone</Label><Input value={lojaForm.loja_phone} onChange={e => setLojaForm(f => ({ ...f, loja_phone: e.target.value }))} /></div>
-                    <div className="space-y-1"><Label>CNPJ</Label><Input value={lojaForm.loja_cnpj} onChange={e => setLojaForm(f => ({ ...f, loja_cnpj: e.target.value }))} /></div>
-                    <hr className="border-border" />
-                    <p className="text-sm font-medium">Usuário dono da loja</p>
-                    <div className="space-y-1"><Label>Nome completo *</Label><Input value={lojaForm.owner_name} onChange={e => setLojaForm(f => ({ ...f, owner_name: e.target.value }))} required /></div>
-                    <div className="space-y-1"><Label>E-mail *</Label><Input type="email" value={lojaForm.owner_email} onChange={e => setLojaForm(f => ({ ...f, owner_email: e.target.value }))} required /></div>
-                    <p className="text-xs text-muted-foreground">A senha é gerada automaticamente.</p>
-                    <Button type="submit" className="w-full" disabled={createLojaMutation.isPending}>{createLojaMutation.isPending ? 'Criando...' : 'Criar Loja'}</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <Button variant={showArchivedLojas ? 'default' : 'outline'} size="sm" onClick={() => setShowArchivedLojas(s => !s)} className="gap-1.5">
-                <Archive className="h-4 w-4" />{showArchivedLojas ? 'Ativas' : 'Arquivadas'}
-              </Button>
-            </div>
-
-            {lojasVisible.length === 0 ? (
-              <p className="text-center text-muted-foreground py-16">{showArchivedLojas ? 'Nenhuma loja arquivada.' : 'Nenhuma loja cadastrada.'}</p>
-            ) : (
-              lojasVisible.map((l) => (
-                <div key={l.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${l.archived ? 'opacity-60' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground truncate">{l.name}</p>
-                      {l.archived && <Badge variant="outline" className="text-xs shrink-0">Arquivada</Badge>}
-                    </div>
-                    {l.phone && <p className="text-sm text-muted-foreground">{l.phone}</p>}
-                    {l.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {l.cnpj}</p>}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditLoja(l)}><Pencil className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchiveLoja(l)}>
-                        {l.archived ? <><ArchiveRestore className="h-4 w-4 mr-2" /> Reativar</> : <><Archive className="h-4 w-4 mr-2" /> Arquivar</>}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeleteLoja(l)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* ─── Vendedoras Tab ─── */}
-        {tab === 'vendedoras' && (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Dialog open={vendedoraDialogOpen} onOpenChange={setVendedoraDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex-1 gap-2" variant="outline"><UserPlus className="h-4 w-4" /> Adicionar Vendedora</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Nova Vendedora</DialogTitle></DialogHeader>
-                  <form onSubmit={e => { e.preventDefault(); createVendedoraMutation.mutate(); }} className="space-y-3">
-                    <div className="space-y-1"><Label>Nome completo *</Label><Input value={vendedoraForm.full_name} onChange={e => setVendedoraForm(f => ({ ...f, full_name: e.target.value }))} required /></div>
-                    <div className="space-y-1"><Label>E-mail *</Label><Input type="email" value={vendedoraForm.email} onChange={e => setVendedoraForm(f => ({ ...f, email: e.target.value }))} required /></div>
-                    <div className="space-y-1"><Label>Celular</Label><Input value={vendedoraForm.phone} onChange={e => setVendedoraForm(f => ({ ...f, phone: e.target.value }))} placeholder="(31) 99999-9999" /></div>
-                    <div className="space-y-1">
-                      <Label>Loja *</Label>
-                      <Select value={vendedoraForm.loja_id} onValueChange={v => setVendedoraForm(f => ({ ...f, loja_id: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Selecione a loja" /></SelectTrigger>
-                        <SelectContent>{lojas.filter((l) => !l.archived).map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <p className="text-xs text-muted-foreground">A senha é gerada automaticamente.</p>
-                    <Button type="submit" className="w-full" disabled={createVendedoraMutation.isPending || !vendedoraForm.loja_id}>{createVendedoraMutation.isPending ? 'Criando...' : 'Criar Vendedora'}</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              <Button variant={showArchivedVendedoras ? 'default' : 'outline'} size="sm" onClick={() => setShowArchivedVendedoras(s => !s)} className="gap-1.5">
-                <Archive className="h-4 w-4" />{showArchivedVendedoras ? 'Ativas' : 'Arquivadas'}
-              </Button>
-            </div>
-
-            {vendedorasVisible.length === 0 ? (
-              <p className="text-center text-muted-foreground py-16">{showArchivedVendedoras ? 'Nenhuma vendedora arquivada.' : 'Nenhuma vendedora cadastrada.'}</p>
-            ) : (
-              vendedorasVisible.map((v) => (
-                <div key={v.id} className={`rounded-xl border bg-card p-4 flex items-start gap-3 ${v.archived ? 'opacity-60' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground truncate">{v.profile?.full_name || 'Sem nome'}</p>
-                      {v.archived && <Badge variant="outline" className="text-xs shrink-0">Arquivada</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{v.profile?.email || ''}</p>
-                    {v.profile?.phone && <p className="text-xs text-muted-foreground">Tel: {v.profile.phone}</p>}
-                    <p className="text-xs text-muted-foreground mt-0.5">Loja: {v.loja?.name || '—'}</p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditVendedora(v)}><Pencil className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchiveVendedora(v)}>
-                        {v.archived ? <><ArchiveRestore className="h-4 w-4 mr-2" /> Reativar</> : <><Archive className="h-4 w-4 mr-2" /> Arquivar</>}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeleteVendedora(v)} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4 mr-2" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* ─── Clientes Tab ─── */}
-        {tab === 'clientes' && (
-          <ClientesTab
-            role="master"
-            canCreate={true}
-            availableVendedoras={allVendedorasForClientes}
-          />
-        )}
-
-        {/* ─── Admins Tab ─── */}
-        {tab === 'admins' && (
-          <div className="space-y-3">
-            <Dialog open={masterDialogOpen} onOpenChange={setMasterDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full gap-2" variant="outline"><UserPlus className="h-4 w-4" /> Adicionar Administrador Master</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Novo Administrador Master</DialogTitle></DialogHeader>
-                <form onSubmit={e => { e.preventDefault(); createMasterMutation.mutate(); }} className="space-y-3">
-                  <div className="space-y-1"><Label>Nome completo *</Label><Input value={masterForm.full_name} onChange={e => setMasterForm(f => ({ ...f, full_name: e.target.value }))} required /></div>
-                  <div className="space-y-1"><Label>E-mail *</Label><Input type="email" value={masterForm.email} onChange={e => setMasterForm(f => ({ ...f, email: e.target.value }))} required /></div>
-                  <div className="space-y-1"><Label>Celular</Label><Input value={masterForm.phone} onChange={e => setMasterForm(f => ({ ...f, phone: e.target.value }))} placeholder="(31) 99999-9999" /></div>
-                  <p className="text-xs text-muted-foreground">O novo usuário terá acesso total ao sistema. A senha é gerada automaticamente.</p>
-                  <Button type="submit" className="w-full" disabled={createMasterMutation.isPending}>{createMasterMutation.isPending ? 'Criando...' : 'Criar Administrador'}</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            {isLoadingAdmins ? (
-              <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-            ) : admins.length === 0 ? (
-              <p className="text-center text-muted-foreground py-10">Nenhum administrador encontrado.</p>
-            ) : (
-              <div className="space-y-2">
-                {admins.map((admin) => (
-                  <div key={admin.user_id} className="rounded-xl border bg-card p-4 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{admin.full_name || 'Sem nome'}</p>
-                      <p className="text-sm text-muted-foreground">{admin.email}</p>
-                      {admin.phone && <p className="text-xs text-muted-foreground">Tel: {admin.phone}</p>}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditMaster(admin); setEditMasterForm({ full_name: admin.full_name, phone: admin.phone || '' }); }}>
-                          <Pencil className="h-4 w-4 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeleteMaster(admin)} className="text-destructive focus:text-destructive" disabled={admin.user_id === user?.id}>
-                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         )}
       </main>
 
