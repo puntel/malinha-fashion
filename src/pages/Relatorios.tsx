@@ -10,7 +10,11 @@ import {
   Filter,
   ArrowUpRight,
   ArrowDownRight,
-  Loader2
+  Loader2,
+  ClipboardCheck,
+  History,
+  CheckCircle2,
+  Plus
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +24,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { fetchInventoryChecks, createInventoryCheck } from '@/lib/api';
+import type { InventoryCheck, InventoryCheckItem } from '@/lib/types';
 import { 
   BarChart, 
   Bar, 
@@ -68,6 +78,9 @@ export default function Relatorios() {
   const { user, role } = useAuth();
   const [period, setPeriod] = useState('30');
   const [vendedoraFilter, setVendedoraFilter] = useState('all');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [checkObservations, setCheckObservations] = useState<Record<string, string>>({});
+  const [checkedProducts, setCheckedProducts] = useState<Record<string, boolean>>({});
 
   // Fetch loja_id for the current user
   const { data: userData } = useQuery<{ loja_id: string | null | undefined }>({
@@ -133,6 +146,21 @@ export default function Relatorios() {
       };
     },
     enabled: !!lojaId || role === 'master'
+  });
+
+  const { data: inventoryChecks = [], isLoading: isLoadingChecks, refetch: refetchChecks } = useQuery({
+    queryKey: ['inventory-checks', lojaId],
+    queryFn: () => fetchInventoryChecks(lojaId!),
+    enabled: !!lojaId
+  });
+
+  const { data: currentProfile } = useQuery({
+    queryKey: ['current-profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('*').eq('user_id', user?.id).single();
+      return data;
+    },
+    enabled: !!user?.id
   });
 
   const stats = useMemo(() => {
@@ -435,11 +463,42 @@ export default function Relatorios() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="vendas">Vendas Recentes</TabsTrigger>
+            <TabsTrigger value="verificacao">Verificação de Estoque</TabsTrigger>
             <TabsTrigger value="estoque">Produtos s/ Estoque</TabsTrigger>
           </TabsList>
-          <Button variant="outline" size="sm" onClick={() => exportToExcel(document.querySelector('[data-state="active"]')?.getAttribute('value') || 'vendas')} className="gap-2">
-            <Download className="h-4 w-4" /> Exportar Planilha
-          </Button>
+          <div className="flex gap-2">
+            {isVerifying ? (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setIsVerifying(false)}>Cancelar</Button>
+                <Button size="sm" onClick={async () => {
+                  if (!lojaId || !user) return;
+                  try {
+                    const items = reportData?.products.map(p => ({
+                      product_id: p.id,
+                      product_name: p.name,
+                      internal_code: p.internal_code,
+                      expected_quantity: p.quantity,
+                      checked: !!checkedProducts[p.id],
+                      observation: checkObservations[p.id] || ''
+                    })) || [];
+                    
+                    await createInventoryCheck(lojaId, user.id, currentProfile?.full_name || 'Usuário', items);
+                    toast.success('Verificação de estoque salva!');
+                    setIsVerifying(false);
+                    setCheckObservations({});
+                    setCheckedProducts({});
+                    refetchChecks();
+                  } catch (err) {
+                    toast.error('Erro ao salvar verificação');
+                  }
+                }}>Salvar Verificação</Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => exportToExcel(document.querySelector('[data-state="active"]')?.getAttribute('value') || 'vendas')} className="gap-2">
+                <Download className="h-4 w-4" /> Exportar Planilha
+              </Button>
+            )}
+          </div>
         </div>
 
         <TabsContent value="vendas" className="border rounded-xl bg-card overflow-hidden">
@@ -470,6 +529,109 @@ export default function Relatorios() {
               </tbody>
             </table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="verificacao" className="space-y-4">
+          {isVerifying ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Nova Verificação de Estoque</CardTitle>
+                <CardDescription>Verifique os itens físicos e adicione observações se necessário.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="p-2 text-left w-10">Conf.</th>
+                        <th className="p-2 text-left">Produto</th>
+                        <th className="p-2 text-left">Cód.</th>
+                        <th className="p-2 text-center w-20">Estoque</th>
+                        <th className="p-2 text-left">Observação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {reportData?.products.map((p) => (
+                        <tr key={p.id} className="hover:bg-muted/30">
+                          <td className="p-2">
+                            <Checkbox 
+                              checked={checkedProducts[p.id] || false} 
+                              onCheckedChange={(checked) => setCheckedProducts(prev => ({ ...prev, [p.id]: !!checked }))}
+                            />
+                          </td>
+                          <td className="p-2 font-medium">{p.name}</td>
+                          <td className="p-2 text-muted-foreground">{p.internal_code || '-'}</td>
+                          <td className="p-2 text-center">{p.quantity}</td>
+                          <td className="p-2">
+                            <Input 
+                              placeholder="Obs..." 
+                              className="h-8 text-xs" 
+                              value={checkObservations[p.id] || ''}
+                              onChange={(e) => setCheckObservations(prev => ({ ...prev, [p.id]: e.target.value }))}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border border-dashed">
+                <div>
+                  <h3 className="font-medium">Realizar nova conferência</h3>
+                  <p className="text-sm text-muted-foreground">Inicie uma verificação manual do estoque físico.</p>
+                </div>
+                <Button onClick={() => setIsVerifying(true)} className="gap-2">
+                  <ClipboardCheck className="h-4 w-4" /> Iniciar Verificação
+                </Button>
+              </div>
+
+              <div className="grid gap-4">
+                {isLoadingChecks ? (
+                   <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : inventoryChecks.length === 0 ? (
+                  <p className="text-center py-10 text-muted-foreground italic">Nenhuma verificação realizada anteriormente.</p>
+                ) : (
+                  inventoryChecks.map((check) => (
+                    <Card key={check.id} className="overflow-hidden border-l-4 border-l-primary">
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <History className="h-4 w-4 text-muted-foreground" />
+                              Verificação em {format(new Date(check.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                            </CardTitle>
+                            <CardDescription>Realizada por {check.vendedora_name}</CardDescription>
+                          </div>
+                          <Badge variant="outline" className="bg-primary/5">{check.items?.length || 0} itens</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="mt-2 space-y-1">
+                          {check.items?.filter(item => item.checked || item.observation).slice(0, 3).map(item => (
+                            <div key={item.id} className="text-xs flex items-center gap-2 text-muted-foreground">
+                              {item.checked ? <CheckCircle2 className="h-3 w-3 text-success" /> : <div className="h-3 w-3" />}
+                              <span className="font-medium text-foreground">{item.product_name}</span>
+                              {item.observation && <span className="italic text-[10px]">- "{item.observation}"</span>}
+                            </div>
+                          ))}
+                          {(check.items?.filter(item => item.checked || item.observation).length || 0) > 3 && (
+                            <p className="text-[10px] text-muted-foreground pl-5">...e mais {(check.items?.filter(item => item.checked || item.observation).length || 0) - 3} itens</p>
+                          )}
+                          {check.items?.filter(item => item.checked || item.observation).length === 0 && (
+                            <p className="text-xs text-muted-foreground italic">Nenhum item marcado ou com observação.</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="estoque" className="border rounded-xl bg-card overflow-hidden">

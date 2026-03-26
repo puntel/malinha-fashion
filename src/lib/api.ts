@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Malinha, MalinhaProduct, MalinhaStatus, ProductStatus } from './types';
+import type { 
+  Malinha, InventoryProduct, InventoryCheck, InventoryCheckItem,
+  Sale, MalinhaProduct, Profile, MalinhaStatus, ProductStatus
+} from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -112,10 +115,56 @@ export async function uploadProductPhoto(file: File): Promise<string> {
   return `${SUPABASE_URL}/storage/v1/object/public/product-photos/${fileName}`;
 }
 
-export async function sendEmailNotification(to: string, subject: string, html: string) {
+export const sendEmailNotification = async (to: string, subject: string, html: string) => {
   const { data, error } = await supabase.functions.invoke('send-email', {
-    body: { to, subject, html },
+    body: { to, subject, html }
   });
   if (error) throw error;
   return data;
-}
+};
+
+// ─── Inventory Checks ───
+
+export const fetchInventoryChecks = async (lojaId: string) => {
+  const { data, error } = await (supabase
+    .from('inventory_checks' as any) as any)
+    .select('*, items:inventory_check_items(*)')
+    .eq('loja_id', lojaId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as InventoryCheck[];
+};
+
+export const createInventoryCheck = async (
+  lojaId: string, 
+  createdBy: string, 
+  vendedoraName: string,
+  items: Omit<InventoryCheckItem, 'id' | 'check_id' | 'created_at'>[]
+) => {
+  // 1. Create header
+  const { data: check, error: checkError } = await (supabase
+    .from('inventory_checks' as any) as any)
+    .insert({
+      loja_id: lojaId,
+      created_by: createdBy,
+      vendedora_name: vendedoraName
+    })
+    .select()
+    .single();
+
+  if (checkError) throw checkError;
+
+  // 2. Create items
+  const itemsToInsert = items.map(item => ({
+    ...item,
+    check_id: check.id
+  }));
+
+  const { error: itemsError } = await (supabase
+    .from('inventory_check_items' as any) as any)
+    .insert(itemsToInsert);
+
+  if (itemsError) throw itemsError;
+
+  return check.id;
+};

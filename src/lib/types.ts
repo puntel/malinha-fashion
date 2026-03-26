@@ -96,3 +96,24 @@ export interface Vendedora {
   profile?: Profile | null;
   loja?: { id: string, name: string } | null;
 }
+
+export interface InventoryCheck {
+  id: string;
+  loja_id: string;
+  created_by: string | null;
+  created_at: string;
+  vendedora_name?: string | null;
+  items?: InventoryCheckItem[];
+}
+
+export interface InventoryCheckItem {
+  id: string;
+  check_id: string;
+  product_id: string;
+  product_name: string;
+  internal_code: string | null;
+  expected_quantity: number;
+  checked: boolean;
+  observation?: string | null;
+  created_at: string;
+}
