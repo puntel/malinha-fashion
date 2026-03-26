@@ -24,9 +24,9 @@ export default function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const menuItems = [
-    { title: 'Malinha', icon: Package, path: '/dashboard', roles: ['master', 'loja', 'vendedora'] },
-    { title: 'Vendas', icon: ShoppingCart, path: '/vendas', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Produtos', icon: Warehouse, path: '/produtos', roles: ['master', 'loja', 'vendedora'] },
+    { title: 'Vendas', icon: ShoppingCart, path: '/vendas', roles: ['master', 'loja', 'vendedora'] },
+    { title: 'Consignado', icon: Package, path: '/dashboard', roles: ['master', 'loja', 'vendedora'] },
     { title: 'Relatórios', icon: BarChart3, path: '/relatorios', roles: ['master', 'loja', 'vendedora'] },
   ];
 
