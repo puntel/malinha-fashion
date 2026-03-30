@@ -1,3 +1,4 @@
+// deno-lint-ignore no-import-prefix
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
       if (!isMaster) throw new Error("Forbidden: not master");
       const { user_email, new_password } = body;
       const { data: { users } } = await adminClient.auth.admin.listUsers();
-      const target = users?.find((u: { email: string; id: string }) => u.email === user_email);
+      const target = users?.find((u: { email?: string; id: string }) => u.email === user_email);
       if (!target) throw new Error("User not found");
       const { error } = await adminClient.auth.admin.updateUserById(target.id, { password: new_password });
       if (error) throw error;
