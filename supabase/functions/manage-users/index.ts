@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", caller.id);
     if (rolesErr) throw rolesErr;
-    
+
     const roles = (callerRoles || []).map((r: { role: string }) => r.role);
     const isMaster = roles.includes("master");
     const isLoja = roles.includes("loja");
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     if (action === "create_master") {
       if (!isMaster) throw new Error("Forbidden: not master");
-      
+
       const { email, password, full_name, phone } = body;
       const temporaryPassword = password?.trim() || generateTemporaryPassword();
 
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     if (action === "delete_user") {
       if (!isMaster) throw new Error("Forbidden: only master can delete users");
       const { user_id } = body;
-      
+
       const { error } = await adminClient.auth.admin.deleteUser(user_id);
       if (error) throw error;
 

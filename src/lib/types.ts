@@ -1,6 +1,28 @@
 export type MalinhaStatus = 'Enviada' | 'Em aberto' | 'Pedido realizado' | 'Finalizada';
 export type ProductStatus = 'pending' | 'accepted' | 'rejected' | 'edited';
 
+export type FeatureKey = 'clientes' | 'produtos' | 'vendas' | 'malinhas' | 'relatorios' | 'modelos';
+
+export const FEATURES: { key: FeatureKey; label: string; description: string }[] = [
+  { key: 'clientes',   label: 'Clientes',   description: 'Ver e gerenciar clientes' },
+  { key: 'produtos',   label: 'Produtos',   description: 'Ver e gerenciar estoque' },
+  { key: 'vendas',     label: 'Vendas',     description: 'Registrar e visualizar vendas' },
+  { key: 'malinhas',   label: 'Consignado', description: 'Criar e acompanhar malinhas' },
+  { key: 'relatorios', label: 'Relatórios', description: 'Acessar relatórios e insights' },
+  { key: 'modelos',    label: 'Modelos',    description: 'Usar modelos de mensagens' },
+];
+
+export interface UserPermission {
+  id: string;
+  user_id: string;
+  feature: FeatureKey;
+  can_view: boolean;
+  can_edit: boolean;
+  granted_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MalinhaProduct {
   id: string;
   malinha_id: string;

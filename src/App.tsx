@@ -26,6 +26,7 @@ import Clientes from './pages/Clientes';
 import Lojas from './pages/Lojas';
 import Vendedoras from './pages/Vendedoras';
 import Admins from './pages/Admins';
+import Permissoes from './pages/Permissoes';
 import MainLayout from "@/components/MainLayout";
 
 const queryClient = new QueryClient();
@@ -110,6 +111,7 @@ const App = () => (
             <Route path="/lojas" element={<ProtectedRoute allowedRoles={['master']}><MainLayout><Lojas /></MainLayout></ProtectedRoute>} />
             <Route path="/vendedoras" element={<ProtectedRoute allowedRoles={['master', 'loja']}><MainLayout><Vendedoras /></MainLayout></ProtectedRoute>} />
             <Route path="/admins" element={<ProtectedRoute allowedRoles={['master']}><MainLayout><Admins /></MainLayout></ProtectedRoute>} />
+            <Route path="/permissoes" element={<ProtectedRoute allowedRoles={['master', 'loja']}><MainLayout><Permissoes /></MainLayout></ProtectedRoute>} />
 
             {/* Shared authenticated routes */}
             <Route path="/nova-malinha" element={
