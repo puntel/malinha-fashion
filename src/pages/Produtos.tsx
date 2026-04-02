@@ -68,16 +68,17 @@ export default function Produtos() {
   const [form, setForm] = useState({
     name: '',
     internal_code: '',
-    quantity: '0',
     unit_price: '',
     profit_percent: '0',
     category: '',
     brand: '',
-    size: '',
-    color: '',
     description: '',
     image_url: ''
   });
+  
+  const [variations, setVariations] = useState<{ id: string; size: string; color: string; quantity: string }[]>([
+    { id: crypto.randomUUID(), size: '', color: '', quantity: '0' }
+  ]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
 
@@ -122,16 +123,14 @@ export default function Produtos() {
     setForm({
       name: '',
       internal_code: '',
-      quantity: '0',
       unit_price: '',
       profit_percent: '0',
       category: '',
       brand: '',
-      size: '',
-      color: '',
       description: '',
       image_url: ''
     });
+    setVariations([{ id: crypto.randomUUID(), size: '', color: '', quantity: '0' }]);
     setPhotoFile(null);
     setPhotoPreview('');
     setEditingProduct(null);
@@ -142,16 +141,19 @@ export default function Produtos() {
     setForm({
       name: p.name,
       internal_code: p.internal_code || '',
-      quantity: String(p.quantity),
       unit_price: String(p.unit_price),
       profit_percent: String(p.profit_percent || '0'),
       category: p.category || '',
       brand: p.brand || '',
-      size: p.size || '',
-      color: p.color || '',
       description: p.description || '',
       image_url: p.image_url || ''
     });
+    setVariations([{ 
+      id: crypto.randomUUID(), 
+      size: p.size || '', 
+      color: p.color || '', 
+      quantity: String(p.quantity)
+    }]);
     setPhotoPreview(p.image_url || '');
     setIsAddOpen(true);
   };
@@ -165,29 +167,39 @@ export default function Produtos() {
         image_url = await uploadProductPhoto(photoFile);
       }
 
-      const payload = {
+      const basePayload = {
         name: form.name,
         internal_code: form.internal_code,
-        quantity: parseInt(form.quantity),
         unit_price: parseFloat(form.unit_price.replace(',', '.')),
         profit_percent: parseFloat(form.profit_percent),
         category: form.category,
         brand: form.brand,
-        size: form.size,
-        color: form.color,
         description: form.description,
         image_url,
         loja_id: lojaId
       };
 
       if (editingProduct) {
+        const v = variations[0];
+        const payload = {
+          ...basePayload,
+          size: v.size,
+          color: v.color,
+          quantity: parseInt(v.quantity) || 0
+        };
         const { error } = await supabase.from('products').update(payload).eq('id', editingProduct.id);
         if (error) throw error;
         toast.success('Produto atualizado!');
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const payloads = variations.map(v => ({
+          ...basePayload,
+          size: v.size,
+          color: v.color,
+          quantity: parseInt(v.quantity) || 0
+        }));
+        const { error } = await supabase.from('products').insert(payloads);
         if (error) throw error;
-        toast.success('Produto criado!');
+        toast.success(payloads.length > 1 ? `${payloads.length} variações criadas!` : 'Produto criado!');
       }
 
       setIsAddOpen(false);
@@ -444,15 +456,6 @@ export default function Produtos() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Quantidade *</Label>
-                    <Input 
-                      type="number" 
-                      value={form.quantity} 
-                      onChange={(e) => setForm({...form, quantity: e.target.value})} 
-                      required 
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Preço Unitário (R$) *</Label>
                     <Input 
                       value={form.unit_price} 
@@ -461,33 +464,91 @@ export default function Produtos() {
                       required 
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>% de Lucro</Label>
+                    <Input 
+                      type="number" 
+                      value={form.profit_percent} 
+                      onChange={(e) => setForm({...form, profit_percent: e.target.value})} 
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>% de Lucro</Label>
-                  <Input 
-                    type="number" 
-                    value={form.profit_percent} 
-                    onChange={(e) => setForm({...form, profit_percent: e.target.value})} 
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Tamanho</Label>
-                    <Input 
-                      value={form.size} 
-                      onChange={(e) => setForm({...form, size: e.target.value})} 
-                      placeholder="Ex: M" 
-                    />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">Variações (tamanho · cor · estoque)</Label>
+                    {!editingProduct && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setVariations([...variations, { id: crypto.randomUUID(), size: '', color: '', quantity: '1' }])}
+                        className="h-7 gap-1 px-2 text-xs"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Variação
+                      </Button>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Cor</Label>
-                    <Input 
-                      value={form.color} 
-                      onChange={(e) => setForm({...form, color: e.target.value})} 
-                      placeholder="Ex: Preto" 
-                    />
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    {variations.map((v, i) => (
+                      <div key={v.id} className="flex items-end gap-2 rounded-lg border bg-muted/30 p-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Tam.</Label>
+                          <Input 
+                            className="h-7 text-xs" 
+                            placeholder="Ex: M"
+                            value={v.size} 
+                            onChange={(e) => {
+                              const newVars = [...variations];
+                              newVars[i].size = e.target.value;
+                              setVariations(newVars);
+                            }} 
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Cor</Label>
+                          <Input 
+                            className="h-7 text-xs" 
+                            placeholder="Ex: Preto"
+                            value={v.color} 
+                            onChange={(e) => {
+                              const newVars = [...variations];
+                              newVars[i].color = e.target.value;
+                              setVariations(newVars);
+                            }} 
+                          />
+                        </div>
+                        <div className="w-16 space-y-1">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Qtd *</Label>
+                          <Input 
+                            className="h-7 text-xs px-2" 
+                            type="number"
+                            min="0"
+                            required
+                            value={v.quantity} 
+                            onChange={(e) => {
+                              const newVars = [...variations];
+                              newVars[i].quantity = e.target.value;
+                              setVariations(newVars);
+                            }} 
+                          />
+                        </div>
+                        {!editingProduct && variations.length > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 shrink-0 text-destructive/70 hover:text-destructive"
+                            onClick={() => {
+                              setVariations(variations.filter(vari => vari.id !== v.id));
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
