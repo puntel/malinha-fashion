@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  Package, 
-  ShoppingCart, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  Package,
+  ShoppingCart,
   Download,
   Calendar as CalendarIcon,
   Filter,
@@ -33,15 +33,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { fetchInventoryChecks, createInventoryCheck } from '@/lib/api';
 import type { InventoryCheck, InventoryCheckItem } from '@/lib/types';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
   Area,
 } from 'recharts';
 import { format, subDays } from 'date-fns';
@@ -70,6 +70,13 @@ interface ReportMalinha {
   send_date?: string | null;
   return_date?: string | null;
   malinha_products: any[];
+}
+
+interface ReportData {
+  sales: ReportSale[];
+  malinhas: ReportMalinha[];
+  products: any[];
+  clients: any[];
 }
 
 export default function Relatorios() {
@@ -103,17 +110,17 @@ export default function Relatorios() {
   const { data: vendedoras = [] } = useQuery<{ id: string, full_name: string }[]>({
     queryKey: ['vendedoras-filter', lojaId],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'vendedora');
+      const { data } = await supabase.from('profiles').select('id, full_name');
       return data || [];
     }
   });
 
   // Fetch all necessary data for reports
-  const { data: reportData, isLoading } = useQuery<{sales: ReportSale[], malinhas: ReportMalinha[], products: any[], clients: any[]}>({
+  const { data: reportData, isLoading } = useQuery<ReportData>({
     queryKey: ['report-data', lojaId, period, vendedoraFilter],
     queryFn: async () => {
       const startDate = subDays(new Date(), parseInt(period));
-      
+
       let salesQuery = supabase.from('sales').select('*, clientes(name)').gte('created_at', startDate.toISOString());
       if (lojaId) salesQuery = salesQuery.eq('loja_id', lojaId);
       if (vendedoraFilter !== 'all') salesQuery = salesQuery.eq('vendedora_id', vendedoraFilter);
@@ -138,6 +145,8 @@ export default function Relatorios() {
         products: products || [] as any[],
         clients: clients || [] as any[]
       };
+
+
     },
     enabled: !!lojaId || role === 'master'
   });
@@ -160,7 +169,7 @@ export default function Relatorios() {
   // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     if (!reportData) return null;
-    
+
     const totalSalesValue = reportData.sales.reduce((sum, s) => sum + (s.value - (s.discount || 0)), 0);
     const malinhaSalesValue = reportData.malinhas.reduce((sum, m) => {
       const accepted = m.malinha_products?.filter((p: any) => p.status === 'accepted' || p.status === 'edited') || [];
@@ -187,7 +196,7 @@ export default function Relatorios() {
 
     // Revenue by Day
     const days: Record<string, number> = {};
-    const last30Days = Array.from({length: parseInt(period)}, (_, i) => {
+    const last30Days = Array.from({ length: parseInt(period) }, (_, i) => {
       const d = format(subDays(new Date(), i), 'dd/MM');
       days[d] = 0;
       return d;
@@ -360,7 +369,7 @@ export default function Relatorios() {
           <Button variant="outline" onClick={() => exportToExcel('tudo')} className="gap-2 bg-primary/5 border-primary/20 text-primary hover:bg-primary/10">
             <Download className="h-4 w-4" /> Exportar Tudo
           </Button>
-          
+
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[180px]">
               <CalendarIcon className="h-4 w-4 mr-2" />
@@ -373,7 +382,7 @@ export default function Relatorios() {
               <SelectItem value="90">Últimos 90 dias</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select value={vendedoraFilter} onValueChange={setVendedoraFilter}>
             <SelectTrigger className="w-[180px]">
               <Users className="h-4 w-4 mr-2" />
@@ -444,13 +453,13 @@ export default function Relatorios() {
             <AreaChart data={charts?.revenueByDay}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} tickFormatter={(val) => `R$ ${val}`} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => `R$ ${val}`} />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
                 formatter={(val: number) => [`R$ ${val.toFixed(2).replace('.', ',')}`, 'Receita']}
@@ -485,7 +494,7 @@ export default function Relatorios() {
                 {charts.topProducts.map((p, i) => (
                   <div key={p.name} className="flex items-center gap-3 px-6 py-3 hover:bg-muted/30 transition-colors">
                     <span className={`text-sm font-bold w-5 shrink-0 ${medal(i)}`}>
-                      {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}.`}
+                      {i < 3 ? ['🥇', '🥈', '🥉'][i] : `${i + 1}.`}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{p.name}</p>
@@ -524,7 +533,7 @@ export default function Relatorios() {
                 {charts.topClients.map((c, i) => (
                   <div key={c.name} className="flex items-center gap-3 px-6 py-3 hover:bg-muted/30 transition-colors">
                     <span className={`text-sm font-bold w-5 shrink-0 ${medal(i)}`}>
-                      {i < 3 ? ['🥇','🥈','🥉'][i] : `${i+1}.`}
+                      {i < 3 ? ['🥇', '🥈', '🥉'][i] : `${i + 1}.`}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{c.name}</p>
