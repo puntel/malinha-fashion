@@ -230,40 +230,63 @@ export default function Produtos() {
 
     setLoading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws) as any[];
+      const data: any[] = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const bstr = evt.target?.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            resolve(XLSX.utils.sheet_to_json(ws));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        reader.onerror = (error) => reject(error);
+        reader.readAsBinaryString(file);
+      });
 
-        const importedProducts = data.map(item => ({
+      const importedProducts = data.map(item => {
+        const cleanNumber = (val: any) => {
+          if (!val) return 0;
+          if (typeof val === 'number') return val;
+          const cleanStr = String(val).replace(/[^\d.,-]/g, '').replace(',', '.');
+          const parsed = parseFloat(cleanStr);
+          return isNaN(parsed) ? 0 : parsed;
+        };
+
+        return {
           name: item.Nome || item.name || '',
           internal_code: String(item.Código || item.code || ''),
-          quantity: parseInt(item.Quantidade || item.quantity || '0'),
-          unit_price: parseFloat(String(item.Preço || item.price || '0').replace(',', '.')),
+          quantity: parseInt(item.Quantidade || item.quantity || '0') || 0,
+          unit_price: cleanNumber(item.Preço || item.price),
           category: item.Categoria || item.category || '',
           brand: item.Marca || item.brand || '',
           size: String(item.Tamanho || item.size || ''),
           color: item.Cor || item.color || '',
           description: item.Descrição || item.description || '',
-          profit_percent: parseFloat(item.Lucro || item.profit || '0'),
+          profit_percent: cleanNumber(item.Lucro || item.profit),
           loja_id: lojaId
-        })).filter(p => p.name);
+        };
+      }).filter(p => p.name);
 
-        const { error } = await supabase.from('products').insert(importedProducts);
-        if (error) throw error;
+      if (importedProducts.length === 0) {
+        throw new Error("Nenhum produto válido encontrado. Verifique as colunas da planilha.");
+      }
 
-        toast.success(`${importedProducts.length} produtos importados!`);
-        setIsImportOpen(false);
-        queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
-      };
-      reader.readAsBinaryString(file);
+      const { error } = await supabase.from('products').insert(importedProducts);
+      if (error) throw error;
+
+      toast.success(`${importedProducts.length} produtos importados!`);
+      setIsImportOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
     } catch (err: any) {
-      toast.error('Erro na importação. Verifique o formato do arquivo.');
+      console.error(err);
+      toast.error(err.message || 'Erro na importação. Verifique o formato do arquivo.');
     } finally {
       setLoading(false);
+      e.target.value = ''; // Reset input so same file can be selected again
     }
   };
 
