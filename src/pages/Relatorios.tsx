@@ -126,7 +126,9 @@ export default function Relatorios() {
       if (vendedoraFilter !== 'all') salesQuery = salesQuery.eq('vendedora_id', vendedoraFilter);
       const { data: sales } = await salesQuery;
 
-      let malinhasQuery = supabase.from('malinhas').select('*, malinha_products(*)').gte('created_at', startDate.toISOString());
+      // Cast to `any` to avoid "type instantiation is excessively deep" TS error
+      // caused by the deeply-nested generic returned by the malinha_products(*) join.
+      let malinhasQuery: any = supabase.from('malinhas').select('*, malinha_products(*)').gte('created_at', startDate.toISOString());
       if (lojaId) malinhasQuery = malinhasQuery.eq('loja_id', lojaId);
       if (vendedoraFilter !== 'all') malinhasQuery = malinhasQuery.eq('vendedora_id', vendedoraFilter);
       const { data: malinhas } = await malinhasQuery;
