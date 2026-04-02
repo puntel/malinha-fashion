@@ -150,10 +150,49 @@ export default function MalinhaResumo() {
     try {
       const noteToSave = sellerNote.trim() || malinha.seller_note || '';
       await updateMalinhaStatus(malinha.id, 'Finalizada', noteToSave);
+
+      // Register sales for accepted/edited products
+      const soldProducts = products.filter(p => p.status === 'accepted' || p.status === 'edited');
+      if (soldProducts.length > 0) {
+        // Get loja_id from vendedoras table
+        let lojaId: string | null = null;
+        if (malinha.vendedora_id) {
+          const { data: vendedoraData } = await supabase
+            .from('vendedoras')
+            .select('loja_id')
+            .eq('user_id', malinha.vendedora_id)
+            .maybeSingle();
+          lojaId = vendedoraData?.loja_id ?? null;
+        }
+
+        const salesPayload = soldProducts.map(p => ({
+          product_name: p.code,
+          internal_code: p.code,
+          quantity: p.quantity,
+          value: Number(p.price) * p.quantity,
+          discount: 0,
+          payment_method: null,
+          category: 'Consignado',
+          vendedora_id: malinha.vendedora_id,
+          loja_id: lojaId,
+          cliente_id: null,
+        }));
+
+        const { error: salesError } = await supabase.from('sales').insert(salesPayload);
+        if (salesError) {
+          console.error('Erro ao registrar vendas:', salesError);
+          toast.warning('Malinha finalizada, mas houve um erro ao registrar as vendas.');
+        } else {
+          toast.success(`Malinha finalizada! ${soldProducts.length} venda(s) registrada(s).`);
+        }
+      } else {
+        toast.success('Malinha finalizada!');
+      }
+
       invalidate();
-      toast.success('Malinha finalizada!');
     } catch (err) {
       console.error(err);
+      toast.error('Erro ao finalizar malinha.');
     } finally {
       setFinalizing(false);
     }
