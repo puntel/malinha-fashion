@@ -180,12 +180,10 @@ export default function Relatorios() {
 
     const totalRevenue = totalSalesValue + malinhaSalesValue;
     const totalOrders = reportData.sales.length + reportData.malinhas.length;
-    const lowStockCount = reportData.products.filter(p => p.quantity <= 3).length;
 
     return {
       totalRevenue,
       totalOrders,
-      lowStockCount,
       newClients: reportData.clients.length,
       salesCount: reportData.sales.length,
       malinhaCount: reportData.malinhas.length
@@ -399,7 +397,7 @@ export default function Relatorios() {
       </div>
 
       {/* ── Stats Grid ─────────────────────────────────────────────────── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-br from-primary/10 via-primary/5 to-background">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
@@ -430,16 +428,6 @@ export default function Relatorios() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.malinhaCount}</div>
             <p className="text-xs text-muted-foreground mt-1">Consignados em andamento</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
-            <Package className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.lowStockCount}</div>
-            <p className="text-xs text-destructive mt-1 font-medium">Produtos precisam de reposição</p>
           </CardContent>
         </Card>
       </div>
@@ -556,7 +544,6 @@ export default function Relatorios() {
           <TabsList>
             <TabsTrigger value="vendas">Vendas Recentes</TabsTrigger>
             <TabsTrigger value="verificacao">Verificação de Estoque</TabsTrigger>
-            <TabsTrigger value="estoque">Estoque Baixo</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             {isVerifying ? (
@@ -814,36 +801,7 @@ export default function Relatorios() {
           )}
         </TabsContent>
 
-        {/* ── Estoque Baixo ────────────────────────────────────────────── */}
-        <TabsContent value="estoque" className="border rounded-xl bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b">
-                <tr>
-                  <th className="text-left p-4 font-medium">Produto</th>
-                  <th className="text-left p-4 font-medium">Código</th>
-                  <th className="text-left p-4 font-medium">Categoria</th>
-                  <th className="text-right p-4 font-medium">Qtd Atual</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {reportData?.products.filter(p => p.quantity <= 3).map((product) => (
-                  <tr key={product.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-4 font-medium">{product.name}</td>
-                    <td className="p-4 text-muted-foreground">{product.internal_code || '-'}</td>
-                    <td className="p-4">{product.category || '-'}</td>
-                    <td className="p-4 text-right font-bold text-destructive">{product.quantity}</td>
-                  </tr>
-                ))}
-                {reportData?.products.filter(p => p.quantity <= 3).length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-muted-foreground italic">Todo o estoque está regular.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
+
       </Tabs>
     </div>
   );
