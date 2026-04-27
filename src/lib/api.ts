@@ -123,6 +123,15 @@ export const sendEmailNotification = async (to: string, subject: string, html: s
   return data;
 };
 
+export const createCheckoutSession = async (malinhaId: string): Promise<{ url: string }> => {
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    body: { malinha_id: malinhaId }
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+};
+
 // ─── Inventory Checks ───
 
 export const fetchInventoryChecks = async (lojaId: string) => {

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2,
-  Loader2, Pencil, Trash2, Plus, Camera, X, Mail
+  Loader2, Pencil, Trash2, Plus, Camera, X, Mail, CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto, sendEmailNotification } from '@/lib/api';
+import { fetchMalinhaById, updateMalinhaStatus, uploadProductPhoto, sendEmailNotification, createCheckoutSession } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -40,6 +40,8 @@ export default function MalinhaResumo() {
   const [finalizing, setFinalizing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [generatingPayment, setGeneratingPayment] = useState(false);
+  const [paymentLink, setPaymentLink] = useState('');
 
   // Client edit
   const [editClientOpen, setEditClientOpen] = useState(false);
@@ -142,6 +144,20 @@ export default function MalinhaResumo() {
       toast.error('Erro ao enviar e-mail. Verifique as configurações do Resend.');
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const handleGeneratePayment = async () => {
+    setGeneratingPayment(true);
+    try {
+      const data = await createCheckoutSession(malinha.id);
+      setPaymentLink(data.url);
+      toast.success('Link de pagamento gerado!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao gerar link de pagamento do Stripe.');
+    } finally {
+      setGeneratingPayment(false);
     }
   };
 
@@ -542,7 +558,30 @@ export default function MalinhaResumo() {
             <Share2 className="h-4 w-4 text-primary" />
             <h3 className="font-display text-sm font-medium">Compartilhar com a cliente</h3>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Payment Link Section */}
+          <div className="pt-2 pb-4 border-b border-muted">
+             {paymentLink ? (
+                <div className="space-y-2">
+                   <Label className="text-success font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4"/> Link de Pagamento Pronto</Label>
+                   <div className="flex gap-2">
+                     <Input value={paymentLink} readOnly className="text-xs border-success/30 bg-success/5" />
+                     <Button variant="secondary" size="icon" onClick={() => {
+                        navigator.clipboard.writeText(paymentLink);
+                        toast.success('Link de pagamento copiado!');
+                     }}>
+                       <Copy className="h-4 w-4" />
+                     </Button>
+                   </div>
+                </div>
+             ) : (
+                <Button onClick={handleGeneratePayment} variant="secondary" className="w-full gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400" size="lg" disabled={generatingPayment}>
+                  {generatingPayment ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />} Gerar Link de Pagamento (Stripe)
+                </Button>
+             )}
+          </div>
+
+          <div className="flex gap-2 pt-2">
             <Input value={link} readOnly className="text-xs" />
             <Button variant="secondary" size="icon" onClick={handleCopy}>
               {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
