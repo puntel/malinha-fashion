@@ -7,7 +7,151 @@ import { Checkbox } from '@/components/ui/checkbox';
 import logo from '@/assets/logo.png';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, CreditCard, User, Building } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, User, Building } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// Inicializa o Stripe (Configure VITE_STRIPE_PUBLISHABLE_KEY no .env)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_TYooMQauvdEDq54NiTphI7jx');
+
+function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      toast.error(submitError.message);
+      setIsProcessing(false);
+      return;
+    }
+
+    // Tenta confirmar o pagamento via Stripe
+    const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        payment_method_data: {
+          billing_details: {
+            name: regForm.owner_name,
+            email: regForm.owner_email,
+          }
+        }
+      },
+      redirect: "if_required",
+    });
+
+    if (paymentError) {
+      toast.error(paymentError.message || "Falha no pagamento");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
+      // Sucesso no pagamento! Agora criamos a loja no banco.
+      try {
+        const res = await supabase.functions.invoke('manage-users', { 
+          body: { action: 'create_loja', ...regForm } 
+        });
+
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+
+        const tempPassword = res.data?.temporary_password || 'A1b2c3';
+        toast.success(`Loja criada com sucesso! Senha temporária enviada para o e-mail: ${tempPassword}`);
+        onSuccess();
+      } catch (err: any) {
+        toast.error(`Pagamento aprovado, mas erro ao criar loja: ${err.message}. Contate o suporte.`);
+      }
+    }
+
+    setIsProcessing(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-card p-5 rounded-2xl shadow-sm border border-border mt-6">
+        <h3 className="font-semibold text-xs text-primary uppercase tracking-wider mb-4">Pagamento Seguro (R$ 99,90)</h3>
+        <PaymentElement />
+      </div>
+
+      <Button 
+        type="submit" 
+        disabled={!stripe || isProcessing}
+        className="w-full h-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold tracking-widest shadow-md transition-all text-base mt-2 uppercase"
+      >
+        {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Cadastrar e Assinar'}
+      </Button>
+    </form>
+  );
+}
+
+function RegisterView({ goBack }: { goBack: () => void }) {
+  const [clientSecret, setClientSecret] = useState("");
+  const [regForm, setRegForm] = useState({
+    loja_name: '',
+    loja_phone: '',
+    loja_cnpj: '',
+    owner_name: '',
+    owner_email: '',
+  });
+
+  useEffect(() => {
+    // Cria um PaymentIntent assim que a tela de cadastro é aberta
+    supabase.functions.invoke('create-payment-intent', {
+      body: { email: 'nova_loja@exemplo.com', name: 'Nova Loja' }
+    }).then(({ data, error }) => {
+      if (data?.clientSecret) {
+        setClientSecret(data.clientSecret);
+      } else {
+        console.error("Erro ao gerar client secret:", error);
+      }
+    });
+  }, []);
+
+  return (
+    <div className="w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
+      <div className="flex items-center mb-6 relative justify-center">
+        <Button variant="ghost" size="icon" onClick={goBack} className="absolute left-0 text-primary hover:bg-transparent">
+          <ArrowLeft className="h-6 w-6" />
+        </Button>
+        <h2 className="text-xl font-bold text-primary">Criar Conta</h2>
+      </div>
+
+      <div className="space-y-6">
+        <div className="space-y-3 bg-card p-5 rounded-2xl shadow-sm border border-border">
+          <h3 className="font-semibold text-xs text-primary uppercase tracking-wider flex items-center gap-2"><Building className="w-4 h-4"/> Dados da Loja</h3>
+          <Input value={regForm.loja_name} onChange={e => setRegForm(f => ({ ...f, loja_name: e.target.value }))} placeholder="Nome da Loja *" required className="bg-background border-border rounded-lg h-11" />
+          <Input value={regForm.loja_cnpj} onChange={e => setRegForm(f => ({ ...f, loja_cnpj: e.target.value }))} placeholder="CNPJ ou CPF *" required className="bg-background border-border rounded-lg h-11" />
+          <Input value={regForm.loja_phone} onChange={e => setRegForm(f => ({ ...f, loja_phone: e.target.value }))} placeholder="Telefone *" required className="bg-background border-border rounded-lg h-11" />
+        </div>
+
+        <div className="space-y-3 bg-card p-5 rounded-2xl shadow-sm border border-border">
+          <h3 className="font-semibold text-xs text-primary uppercase tracking-wider flex items-center gap-2"><User className="w-4 h-4"/> Dados do Proprietário</h3>
+          <Input value={regForm.owner_name} onChange={e => setRegForm(f => ({ ...f, owner_name: e.target.value }))} placeholder="Nome Completo *" required className="bg-background border-border rounded-lg h-11" />
+          <Input type="email" value={regForm.owner_email} onChange={e => setRegForm(f => ({ ...f, owner_email: e.target.value }))} placeholder="E-mail Corporativo *" required className="bg-background border-border rounded-lg h-11" />
+        </div>
+
+        {clientSecret ? (
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+            <CheckoutForm regForm={regForm} onSuccess={goBack} />
+          </Elements>
+        ) : (
+          <div className="flex justify-center py-6 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2 text-sm">Carregando pagamento...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
@@ -20,15 +164,6 @@ export default function Index() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  // Register State
-  const [regForm, setRegForm] = useState({
-    loja_name: '',
-    loja_phone: '',
-    loja_cnpj: '',
-    owner_name: '',
-    owner_email: '',
-  });
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -48,8 +183,6 @@ export default function Index() {
     setLoading(true);
 
     try {
-      // Usando a edge function atual que autentica pelo e-mail
-      // A senha está na interface apenas como layout conforme solicitado, ou pode ser usada futuramente
       const { data, error: fnError } = await supabase.functions.invoke('login-by-email', {
         body: { email: email.trim() },
       });
@@ -72,23 +205,15 @@ export default function Index() {
       });
 
       if (sessionError) {
-        console.error('Session error:', sessionError);
         toast.error('Erro ao autenticar. Tente novamente.');
       } else {
         toast.success('Login realizado com sucesso!');
       }
     } catch (err) {
-      console.error('Login error:', err);
       toast.error('Erro inesperado. Tente novamente.');
     }
 
     setLoading(false);
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Apenas layout no momento
-    toast.info("Funcionalidade de cadastro e pagamento em desenvolvimento.");
   };
 
   if (!authLoading && user) {
@@ -96,11 +221,11 @@ export default function Index() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#F4F7F4] px-6 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm flex flex-col items-center">
         
         <img src={logo} alt="Logo" className="h-24 w-24 mb-4 object-contain" />
-        <h1 className="font-display text-3xl font-bold text-foreground mb-8 text-[#2F6B43]">BagSync</h1>
+        <h1 className="font-display text-3xl font-bold text-primary mb-8">BagSync</h1>
 
         {isLoginMode ? (
           // --- LOGIN VIEW ---
@@ -115,7 +240,7 @@ export default function Index() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
-                  className="pl-12 h-12 bg-[#EAEFEA] border-0 shadow-sm rounded-full text-center font-medium"
+                  className="pl-12 h-12 bg-secondary/30 border-0 shadow-sm rounded-full text-center font-medium"
                   required
                 />
               </div>
@@ -129,7 +254,7 @@ export default function Index() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Senha"
-                  className="pl-12 pr-12 h-12 bg-[#EAEFEA] border-0 shadow-sm rounded-full text-center font-medium"
+                  className="pl-12 pr-12 h-12 bg-secondary/30 border-0 shadow-sm rounded-full text-center font-medium"
                   required
                 />
                 <button
@@ -142,7 +267,7 @@ export default function Index() {
               </div>
 
               <div className="text-center pt-1 pb-1">
-                <button type="button" className="text-[10px] font-bold text-[#2F6B43] uppercase tracking-wider">
+                <button type="button" className="text-[10px] font-bold text-primary uppercase tracking-wider">
                   Esqueci minha senha
                 </button>
               </div>
@@ -152,20 +277,20 @@ export default function Index() {
                   id="terms" 
                   checked={termsAccepted} 
                   onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-                  className="border-[#2F6B43] h-4 w-4 rounded-sm data-[state=checked]:bg-[#2F6B43]"
+                  className="border-primary h-4 w-4 rounded-sm data-[state=checked]:bg-primary"
                 />
                 <label
                   htmlFor="terms"
                   className="text-[10px] uppercase font-semibold leading-none text-muted-foreground"
                 >
-                  Estou de acordo com os <span className="font-bold text-[#2F6B43]">Termos de uso</span>
+                  Estou de acordo com os <span className="font-bold text-primary">Termos de uso</span>
                 </label>
               </div>
 
               <div className="space-y-3">
                 <Button 
                   type="submit" 
-                  className="w-full h-12 rounded-full bg-[#40825B] hover:bg-[#2F6B43] text-white font-bold text-sm tracking-widest shadow-md transition-all uppercase" 
+                  className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm tracking-widest shadow-md transition-all uppercase" 
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar'}
@@ -173,8 +298,9 @@ export default function Index() {
                 
                 <Button 
                   type="button"
+                  variant="outline"
                   onClick={() => setIsLoginMode(false)}
-                  className="w-full h-12 rounded-full bg-[#40825B] hover:bg-[#2F6B43] text-white font-bold text-sm tracking-widest shadow-md transition-all uppercase"
+                  className="w-full h-12 rounded-full border-primary text-primary hover:bg-primary/5 font-bold text-sm tracking-widest shadow-sm transition-all uppercase"
                 >
                   Criar Conta
                 </Button>
@@ -183,47 +309,7 @@ export default function Index() {
           </div>
         ) : (
           // --- REGISTER VIEW ---
-          <div className="w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
-            <div className="flex items-center mb-6 relative justify-center">
-              <Button variant="ghost" size="icon" onClick={() => setIsLoginMode(true)} className="absolute left-0 text-[#2F6B43] hover:bg-transparent">
-                <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <h2 className="text-xl font-bold text-[#2F6B43]">Criar Conta</h2>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-6">
-              
-              <div className="space-y-3 bg-white/60 p-5 rounded-2xl shadow-sm border border-[#EAEFEA]">
-                <h3 className="font-semibold text-xs text-[#2F6B43] uppercase tracking-wider flex items-center gap-2"><Building className="w-4 h-4"/> Dados da Loja</h3>
-                <Input value={regForm.loja_name} onChange={e => setRegForm(f => ({ ...f, loja_name: e.target.value }))} placeholder="Nome da Loja *" required className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                <Input value={regForm.loja_cnpj} onChange={e => setRegForm(f => ({ ...f, loja_cnpj: e.target.value }))} placeholder="CNPJ ou CPF *" required className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                <Input value={regForm.loja_phone} onChange={e => setRegForm(f => ({ ...f, loja_phone: e.target.value }))} placeholder="Telefone *" required className="bg-white border-0 rounded-lg shadow-sm h-11" />
-              </div>
-
-              <div className="space-y-3 bg-white/60 p-5 rounded-2xl shadow-sm border border-[#EAEFEA]">
-                <h3 className="font-semibold text-xs text-[#2F6B43] uppercase tracking-wider flex items-center gap-2"><User className="w-4 h-4"/> Dados do Proprietário</h3>
-                <Input value={regForm.owner_name} onChange={e => setRegForm(f => ({ ...f, owner_name: e.target.value }))} placeholder="Nome Completo *" required className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                <Input type="email" value={regForm.owner_email} onChange={e => setRegForm(f => ({ ...f, owner_email: e.target.value }))} placeholder="E-mail Corporativo *" required className="bg-white border-0 rounded-lg shadow-sm h-11" />
-              </div>
-
-              <div className="space-y-3 bg-white/60 p-5 rounded-2xl shadow-sm border border-[#EAEFEA]">
-                <h3 className="font-semibold text-xs text-[#2F6B43] uppercase tracking-wider flex items-center gap-2"><CreditCard className="w-4 h-4"/> Pagamento</h3>
-                <Input placeholder="Número do Cartão" className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input placeholder="Validade (MM/AA)" className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                  <Input placeholder="CVV" className="bg-white border-0 rounded-lg shadow-sm h-11" />
-                </div>
-                <Input placeholder="Nome impresso no cartão" className="bg-white border-0 rounded-lg shadow-sm h-11" />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-14 rounded-full bg-[#40825B] hover:bg-[#2F6B43] text-white font-bold tracking-widest shadow-md transition-all text-base mt-2 uppercase"
-              >
-                Cadastrar
-              </Button>
-            </form>
-          </div>
+          <RegisterView goBack={() => setIsLoginMode(true)} />
         )}
       </div>
     </div>
