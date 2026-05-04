@@ -192,6 +192,7 @@ export default function MalinhaResumo() {
           vendedora_id: malinha.vendedora_id,
           loja_id: lojaId,
           cliente_id: null,
+          malinha_id: malinha.id,
         }));
 
         const { error: salesError } = await supabase.from('sales').insert(salesPayload);

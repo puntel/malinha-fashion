@@ -1,11 +1,10 @@
 async function run() {
-  const res = await fetch("https://nrlwfsmquwceathtxjgo.supabase.co/functions/v1/create-payment-intent", {
+  const res = await fetch("https://nrlwfsmquwceathtxjgo.supabase.co/functions/v1/stripe-webhook", {
     method: "POST",
     headers: {
-      "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ybHdmc21xdXdjZWF0aHR4amdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTY3MTgsImV4cCI6MjA4NzQzMjcxOH0.lLfUQ9mi4da9azM8PywQt8EkehdDYv_YK7WOGuutuGE",
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ email: "test@exemplo.com", name: "Test" })
+    body: JSON.stringify({ type: "ping" })
   });
   
   const text = await res.text();

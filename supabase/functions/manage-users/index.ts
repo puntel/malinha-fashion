@@ -82,6 +82,38 @@ Deno.serve(async (req) => {
         .insert({ user_id: userId, loja_id: loja.id });
       if (memberInsertErr) throw memberInsertErr;
 
+      const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+      if (RESEND_API_KEY) {
+        try {
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: "BagSync <onboarding@resend.dev>",
+              to: owner_email,
+              subject: "Bem-vindo ao BagSync - Cadastro Realizado",
+              html: `
+                <h1>Olá, ${owner_name}!</h1>
+                <p>O cadastro da sua loja <strong>${loja_name}</strong> foi realizado com sucesso.</p>
+                <p>Aqui estão as suas credenciais de acesso temporárias:</p>
+                <ul>
+                  <li><strong>E-mail:</strong> ${owner_email}</li>
+                  <li><strong>Senha:</strong> ${temporaryPassword}</li>
+                </ul>
+                <p>Recomendamos que você acesse o sistema e altere sua senha o mais breve possível.</p>
+                <br/>
+                <p>Abraços,<br/>Equipe BagSync</p>
+              `,
+            }),
+          });
+        } catch (e) {
+          console.error("Erro ao enviar email de boas-vindas:", e);
+        }
+      }
+
       return new Response(JSON.stringify({ success: true, loja_id: loja.id, user_id: userId, temporary_password: temporaryPassword }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

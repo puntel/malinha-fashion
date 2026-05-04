@@ -201,36 +201,41 @@ export default function Index() {
     setLoading(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('login-by-email', {
-        body: { email: email.trim() },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
       });
 
-      if (fnError) {
-        toast.error('Erro ao conectar ao servidor. Tente novamente.');
+      if (error) {
+        toast.error('E-mail ou senha incorretos.');
         setLoading(false);
         return;
       }
 
-      if (data?.error) {
-        toast.error(data.error);
-        setLoading(false);
-        return;
-      }
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
-
-      if (sessionError) {
-        toast.error('Erro ao autenticar. Tente novamente.');
-      } else {
-        toast.success('Login realizado com sucesso!');
-      }
+      toast.success('Login realizado com sucesso!');
     } catch (err) {
       toast.error('Erro inesperado. Tente novamente.');
     }
 
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      toast.error('Digite seu e-mail no campo acima para recuperar a senha.');
+      return;
+    }
+    
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin + '/',
+    });
+    
+    if (error) {
+      toast.error('Erro ao solicitar recuperação. Verifique o e-mail digitado.');
+    } else {
+      toast.success('Se o e-mail existir, um link de recuperação foi enviado!');
+    }
     setLoading(false);
   };
 
@@ -285,7 +290,12 @@ export default function Index() {
               </div>
 
               <div className="text-center pt-1 pb-1">
-                <button type="button" className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                <button 
+                  type="button" 
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="text-[10px] font-bold text-primary uppercase tracking-wider hover:opacity-80 disabled:opacity-50"
+                >
                   Esqueci minha senha
                 </button>
               </div>
