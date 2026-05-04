@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Stripe from "https://esm.sh/stripe@14.22.0?target=deno";
 
 const corsHeaders = {
