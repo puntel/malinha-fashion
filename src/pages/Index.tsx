@@ -94,6 +94,7 @@ function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => v
 
 function RegisterView({ goBack }: { goBack: () => void }) {
   const [clientSecret, setClientSecret] = useState("");
+  const [paymentError, setPaymentError] = useState("");
   const [regForm, setRegForm] = useState({
     loja_name: '',
     loja_phone: '',
@@ -107,11 +108,22 @@ function RegisterView({ goBack }: { goBack: () => void }) {
     supabase.functions.invoke('create-payment-intent', {
       body: { email: 'nova_loja@exemplo.com', name: 'Nova Loja' }
     }).then(({ data, error }) => {
-      if (data?.clientSecret) {
+      if (error) {
+        console.error("Erro ao invocar edge function:", error);
+        setPaymentError(error.message || "Erro na conexão com o servidor.");
+        toast.error("Erro na conexão com o sistema de pagamentos.");
+      } else if (data?.error) {
+        console.error("Erro do Stripe:", data.error);
+        setPaymentError(data.error);
+        toast.error("Erro do Stripe: " + data.error);
+      } else if (data?.clientSecret) {
         setClientSecret(data.clientSecret);
       } else {
-        console.error("Erro ao gerar client secret:", error);
+        setPaymentError("Resposta inválida do servidor.");
       }
+    }).catch(err => {
+      console.error("Erro de rede:", err);
+      setPaymentError(err.message || "Falha de rede.");
     });
   }, []);
 
@@ -142,10 +154,16 @@ function RegisterView({ goBack }: { goBack: () => void }) {
           <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
             <CheckoutForm regForm={regForm} onSuccess={goBack} />
           </Elements>
+        ) : paymentError ? (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center mt-6">
+            <h3 className="font-semibold text-destructive mb-2">Conexão Indisponível</h3>
+            <p className="text-sm text-destructive/80 mb-4">{paymentError}</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="border-destructive/30 text-destructive hover:bg-destructive/10">Tentar Novamente</Button>
+          </div>
         ) : (
-          <div className="flex justify-center py-6 text-muted-foreground">
+          <div className="flex justify-center py-6 text-muted-foreground mt-6">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2 text-sm">Carregando pagamento...</span>
+            <span className="ml-2 text-sm">Carregando módulo de pagamento...</span>
           </div>
         )}
       </div>
