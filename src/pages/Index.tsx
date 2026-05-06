@@ -64,7 +64,7 @@ function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => v
         if (res.data?.error) throw new Error(res.data.error);
 
         const tempPassword = res.data?.temporary_password || 'A1b2c3';
-        toast.success(`Loja criada com sucesso! Senha temporária enviada para o e-mail: ${tempPassword}`);
+        toast.success(`Loja criada com sucesso! Você já pode fazer login.`);
         onSuccess();
       } catch (err: any) {
         toast.error(`Pagamento aprovado, mas erro ao criar loja: ${err.message}. Contate o suporte.`);
@@ -101,6 +101,7 @@ function RegisterView({ goBack }: { goBack: () => void }) {
     loja_cnpj: '',
     owner_name: '',
     owner_email: '',
+    owner_password: '',
   });
 
   useEffect(() => {
@@ -148,6 +149,7 @@ function RegisterView({ goBack }: { goBack: () => void }) {
           <h3 className="font-semibold text-xs text-primary uppercase tracking-wider flex items-center gap-2"><User className="w-4 h-4"/> Dados do Proprietário</h3>
           <Input value={regForm.owner_name} onChange={e => setRegForm(f => ({ ...f, owner_name: e.target.value }))} placeholder="Nome Completo *" required className="bg-background border-border rounded-lg h-11" />
           <Input type="email" value={regForm.owner_email} onChange={e => setRegForm(f => ({ ...f, owner_email: e.target.value }))} placeholder="E-mail Corporativo *" required className="bg-background border-border rounded-lg h-11" />
+          <Input type="password" value={regForm.owner_password} onChange={e => setRegForm(f => ({ ...f, owner_password: e.target.value }))} placeholder="Crie uma Senha Forte *" required minLength={6} className="bg-background border-border rounded-lg h-11" />
         </div>
 
         {clientSecret ? (
