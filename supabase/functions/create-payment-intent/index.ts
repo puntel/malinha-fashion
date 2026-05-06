@@ -27,19 +27,30 @@ Deno.serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     });
 
-    // Cria um PaymentIntent para o valor de R$ 99,90 (9990 centavos)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 9990,
-      currency: "brl",
-      receipt_email: email || undefined,
-      description: `Cadastro de Loja - BagSync - ${name || email || 'Cliente'}`,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+    // 1. Cria um Customer
+    const customer = await stripe.customers.create({
+      email: email || undefined,
+      name: name || undefined,
+    });
+
+    // 2. Cria uma Assinatura (Subscription) recorrente de R$ 29,90
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{
+        price_data: {
+          currency: 'brl',
+          product_data: { name: 'Assinatura BagSync Mensal' },
+          unit_amount: 2990, // R$ 29,90
+          recurring: { interval: 'month' }
+        }
+      }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
     });
 
     return new Response(
-      JSON.stringify({ clientSecret: paymentIntent.client_secret }),
+      JSON.stringify({ clientSecret: subscription.latest_invoice.payment_intent.client_secret }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }

@@ -77,7 +77,7 @@ function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => v
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-card p-5 rounded-2xl shadow-sm border border-border mt-6">
-        <h3 className="font-semibold text-xs text-primary uppercase tracking-wider mb-4">Pagamento Seguro (R$ 99,90)</h3>
+        <h3 className="font-semibold text-xs text-primary uppercase tracking-wider mb-4">Pagamento Seguro (R$ 29,90/mês)</h3>
         <PaymentElement />
       </div>
 
