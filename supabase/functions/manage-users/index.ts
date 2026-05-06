@@ -32,28 +32,34 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization");
+    let caller = null;
+    let isMaster = false;
+    let isLoja = false;
 
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) throw new Error("Unauthorized");
+    if (action !== "create_loja") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) throw new Error("Missing authorization");
 
-    // Check caller role
-    const { data: callerRoles, error: rolesErr } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id);
-    if (rolesErr) throw rolesErr;
+      const callerClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await callerClient.auth.getUser();
+      if (!user) throw new Error("Unauthorized");
+      caller = user;
 
-    const roles = (callerRoles || []).map((r: { role: string }) => r.role);
-    const isMaster = roles.includes("master");
-    const isLoja = roles.includes("loja");
+      // Check caller role
+      const { data: callerRoles, error: rolesErr } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id);
+      if (rolesErr) throw rolesErr;
+
+      const roles = (callerRoles || []).map((r: { role: string }) => r.role);
+      isMaster = roles.includes("master");
+      isLoja = roles.includes("loja");
+    }
 
     if (action === "create_loja") {
-      if (!isMaster) throw new Error("Forbidden: not master");
       const { loja_name, loja_phone, loja_cnpj, owner_email, owner_password, owner_name } = body;
       const temporaryPassword = owner_password?.trim() || generateTemporaryPassword();
 
