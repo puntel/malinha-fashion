@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import logo from '@/assets/logo.png';
+
 import { toast } from 'sonner';
 
 export default function ResetPassword() {
@@ -54,7 +54,7 @@ export default function ResetPassword() {
   if (!ready) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-        <img src={logo} alt="BagSync" className="h-20 w-20 mb-4 object-contain" />
+
         <p className="text-muted-foreground text-center">
           Link inválido ou expirado. Solicite um novo link de recuperação.
         </p>
@@ -67,7 +67,7 @@ export default function ResetPassword() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-      <img src={logo} alt="BagSync" className="h-20 w-20 mb-4 object-contain" />
+
       <h1 className="font-display text-2xl font-bold text-foreground mb-1">Nova Senha</h1>
       <p className="text-muted-foreground text-sm mb-8">Digite sua nova senha</p>
 

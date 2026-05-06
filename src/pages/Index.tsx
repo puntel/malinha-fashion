@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import logo from '@/assets/logo.png';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, User, Building } from 'lucide-react';
@@ -248,8 +247,6 @@ export default function Index() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm flex flex-col items-center">
-        
-        <img src={logo} alt="Logo" className="h-24 w-24 mb-4 object-contain" />
         <h1 className="font-display text-3xl font-bold text-primary mb-8">BagSync</h1>
 
         {isLoginMode ? (
