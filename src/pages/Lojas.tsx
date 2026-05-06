@@ -18,7 +18,7 @@ export default function Lojas() {
   const [editLoja, setEditLoja] = useState<Loja | null>(null);
   const [deleteLoja, setDeleteLoja] = useState<Loja | null>(null);
   
-  const [lojaForm, setLojaForm] = useState({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
+  const [lojaForm, setLojaForm] = useState({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '', owner_password: '' });
   const [editLojaForm, setEditLojaForm] = useState({ name: '', phone: '', cnpj: '' });
 
   const { data: lojas = [], isLoading } = useQuery({
@@ -41,7 +41,7 @@ export default function Lojas() {
       const tempPassword = data?.temporary_password || 'A1b2c3';
       toast.success(`Loja criada! Senha temporária: ${tempPassword}`);
       setLojaDialogOpen(false);
-      setLojaForm({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '' });
+      setLojaForm({ loja_name: '', loja_phone: '', loja_cnpj: '', owner_name: '', owner_email: '', owner_password: '' });
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
     },
     onError: (err: Error) => toast.error(`Erro ao criar loja: ${err.message}`),
@@ -125,6 +125,10 @@ export default function Lojas() {
                     <div className="space-y-2">
                       <Label>E-mail Corporativo *</Label>
                       <Input type="email" value={lojaForm.owner_email} onChange={e => setLojaForm(f => ({ ...f, owner_email: e.target.value }))} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Senha de Acesso *</Label>
+                      <Input type="password" value={lojaForm.owner_password} onChange={e => setLojaForm(f => ({ ...f, owner_password: e.target.value }))} placeholder="Mínimo 6 caracteres" required minLength={6} />
                     </div>
                   </div>
                 </div>

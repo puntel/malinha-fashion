@@ -22,7 +22,7 @@ export default function Vendedoras() {
   const [editVendedora, setEditVendedora] = useState<Vendedora | null>(null);
   const [deleteVendedora, setDeleteVendedora] = useState<Vendedora | null>(null);
   
-  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '', loja_id: '' });
+  const [vendedoraForm, setVendedoraForm] = useState({ full_name: '', email: '', phone: '', loja_id: '', password: '' });
   const [editVendedoraForm, setEditVendedoraForm] = useState({ full_name: '', phone: '' });
 
   const isMaster = (myProfile as any)?.role === 'master';
@@ -80,6 +80,7 @@ export default function Vendedoras() {
           email: vendedoraForm.email,
           full_name: vendedoraForm.full_name,
           phone: vendedoraForm.phone,
+          owner_password: vendedoraForm.password,
           loja_id: finalLojaId
         } 
       });
@@ -91,7 +92,7 @@ export default function Vendedoras() {
       const tempPassword = data?.temporary_password || 'A1b2c3';
       toast.success(`Vendedora criada! Senha temporária: ${tempPassword}`);
       setVendedoraDialogOpen(false);
-      setVendedoraForm({ full_name: '', email: '', phone: '', loja_id: '' });
+      setVendedoraForm({ full_name: '', email: '', phone: '', loja_id: '', password: '' });
       queryClient.invalidateQueries({ queryKey: ['vendedoras-list'] });
     },
     onError: (err: Error) => toast.error(`Erro ao criar vendedora: ${err.message}`),
@@ -164,6 +165,10 @@ export default function Vendedoras() {
               <div className="space-y-2">
                 <Label>E-mail *</Label>
                 <Input type="email" value={vendedoraForm.email} onChange={e => setVendedoraForm(f => ({ ...f, email: e.target.value }))} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Senha de Acesso *</Label>
+                <Input type="password" value={vendedoraForm.password} onChange={e => setVendedoraForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" required minLength={6} />
               </div>
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
