@@ -4,10 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import logoSrc from '@/assets/logo.png';
 
 export default function Login() {
   const { user, loading: authLoading } = useAuth();
@@ -71,7 +71,12 @@ export default function Login() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
 
-      <h1 className="font-display text-2xl font-bold text-foreground mb-1">BagSync</h1>
+      <div className="mb-8 flex flex-col items-center gap-2">
+        <img src={logoSrc} alt="BagSync" className="h-14 w-auto object-contain" />
+        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+          Gestão de Moda Consignada
+        </p>
+      </div>
       <p className="text-muted-foreground text-sm mb-8">
         Digite seu e-mail para entrar
       </p>

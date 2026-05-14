@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, User, Building } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import logoSrc from '@/assets/logo.png';
 
 // Inicializa o Stripe (Configure VITE_STRIPE_PUBLISHABLE_KEY no .env)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_TYooMQauvdEDq54NiTphI7jx');
@@ -247,7 +248,12 @@ export default function Index() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm flex flex-col items-center">
-        <h1 className="font-display text-3xl font-bold text-primary mb-8">BagSync</h1>
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <img src={logoSrc} alt="BagSync" className="h-16 w-auto object-contain" />
+          <p className="text-xs text-muted-foreground tracking-wider uppercase font-medium">
+            Gestão de Moda Consignada
+          </p>
+        </div>
 
         {isLoginMode ? (
           // --- LOGIN VIEW ---

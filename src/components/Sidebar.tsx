@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { cn } from '@/lib/utils';
 import type { FeatureKey } from '@/lib/types';
+import logoSrc from '@/assets/logo.png';
 
 export default function Sidebar() {
   const { role, signOut } = useAuth();
@@ -79,7 +80,12 @@ export default function Sidebar() {
     <>
       {/* Mobile Toggle */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button variant="outline" size="icon" onClick={toggleMobile}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMobile}
+          className="bg-[#3D1A5C] text-[#F8EFE2] hover:bg-[#5E2A84] border border-[#A87BC9]/30 shadow-lg"
+        >
           {isMobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
       </div>
@@ -87,69 +93,106 @@ export default function Sidebar() {
       {/* Sidebar Overlay (Mobile) */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-[#2B1B33]/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={toggleMobile}
         />
       )}
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 z-40 h-screen transition-all duration-300 border-r bg-card",
+        "fixed top-0 left-0 z-40 h-screen transition-all duration-300 flex flex-col",
+        "border-r border-[#A87BC9]/20 shadow-2xl",
+        "bg-[#3D1A5C]",
         isCollapsed ? "w-20" : "w-64",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex flex-col h-full py-6">
-          {/* Logo Area */}
+
+          {/* ── Logo Area ─────────────────────────────────────── */}
           <div className={cn(
-            "flex items-center mb-10 px-6",
+            "flex items-center mb-8 px-4",
             isCollapsed ? "justify-center" : "justify-between"
           )}>
-            {!isCollapsed && (
-              <span className="font-display text-2xl font-bold text-foreground">
-                BagSync
-              </span>
-            )}
-            {isCollapsed ? (
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">B</div>
+            {!isCollapsed ? (
+              <div className="flex items-center gap-2 flex-1">
+                <img
+                  src={logoSrc}
+                  alt="BagSync"
+                  className="h-9 w-auto object-contain rounded-md"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
+              </div>
             ) : (
-              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="hidden lg:flex">
+              /* Collapsed: logo icon only */
+              <div className="h-9 w-9 rounded-lg overflow-hidden flex items-center justify-center bg-[#5E2A84]/60 border border-[#A87BC9]/30">
+                <img
+                  src={logoSrc}
+                  alt="B"
+                  className="h-7 w-7 object-contain"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
+              </div>
+            )}
+
+            {!isCollapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="hidden lg:flex h-7 w-7 text-[#A87BC9] hover:text-[#F8EFE2] hover:bg-[#5E2A84]/50"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex-1 space-y-1 px-3 overflow-y-auto">
+          {/* Divider */}
+          <div className="mx-4 mb-5 h-px bg-gradient-to-r from-transparent via-[#A87BC9]/40 to-transparent" />
 
-            {/* ── Main menu ─────────────────────────────────────────── */}
+          {/* ── Navigation Links ──────────────────────────────── */}
+          <nav className="flex-1 space-y-0.5 px-3 overflow-y-auto">
+
+            {/* Main menu */}
             {visibleMenu.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 onClick={() => setIsMobileOpen(false)}
                 className={({ isActive }) => cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group relative",
-                  isActive 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-[#5E2A84] text-[#F8EFE2] shadow-md shadow-[#2B1B33]/40"
+                    : "text-[#A87BC9] hover:bg-[#5E2A84]/50 hover:text-[#F8EFE2]",
                   isCollapsed && "justify-center px-0"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isCollapsed ? "h-6 w-6" : "")} />
-                {!isCollapsed && <span className="font-medium">{item.title}</span>}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md z-50">
-                    {item.title}
-                  </div>
+                {({ isActive }) => (
+                  <>
+                    <item.icon className={cn(
+                      "shrink-0 transition-all",
+                      isCollapsed ? "h-6 w-6" : "h-5 w-5",
+                      isActive ? "text-[#E8CFA3]" : ""
+                    )} />
+                    {!isCollapsed && <span className="font-medium text-sm">{item.title}</span>}
+                    {!isCollapsed && isActive && (
+                      <div className="ml-auto h-1.5 w-1.5 rounded-full bg-[#E8CFA3]" />
+                    )}
+                    {isCollapsed && (
+                      <div className="absolute left-full ml-3 px-2 py-1 bg-[#2B1B33] text-[#F8EFE2] rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl z-50 border border-[#A87BC9]/20">
+                        {item.title}
+                      </div>
+                    )}
+                  </>
                 )}
               </NavLink>
             ))}
 
-            {/* ── Gestão (master + loja) ─────────────────────────── */}
+            {/* Gestão (master + loja) */}
             {visibleManagement.length > 0 && (
-              <div className="pt-4 pb-2 border-t mt-4">
+              <div className="pt-4 pb-1 mt-2">
+                <div className="mx-0 mb-3 h-px bg-gradient-to-r from-transparent via-[#A87BC9]/30 to-transparent" />
                 {!isCollapsed && (
-                  <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <p className="px-3 text-[10px] font-bold text-[#A87BC9]/70 uppercase tracking-widest mb-2">
                     Gestão
                   </p>
                 )}
@@ -159,30 +202,39 @@ export default function Sidebar() {
                     to={item.path}
                     onClick={() => setIsMobileOpen(false)}
                     className={({ isActive }) => cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group relative",
-                      isActive 
-                        ? "bg-primary/10 text-primary font-semibold" 
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
+                      isActive
+                        ? "bg-[#5E2A84]/70 text-[#F8EFE2]"
+                        : "text-[#A87BC9] hover:bg-[#5E2A84]/40 hover:text-[#F8EFE2]",
                       isCollapsed && "justify-center px-0"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5 shrink-0", isCollapsed ? "h-6 w-6" : "")} />
-                    {!isCollapsed && <span className="font-medium">{item.title}</span>}
-                    {isCollapsed && (
-                      <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md z-50">
-                        {item.title}
-                      </div>
+                    {({ isActive }) => (
+                      <>
+                        <item.icon className={cn(
+                          "shrink-0",
+                          isCollapsed ? "h-6 w-6" : "h-5 w-5",
+                          isActive ? "text-[#E8CFA3]" : ""
+                        )} />
+                        {!isCollapsed && <span className="font-medium text-sm">{item.title}</span>}
+                        {isCollapsed && (
+                          <div className="absolute left-full ml-3 px-2 py-1 bg-[#2B1B33] text-[#F8EFE2] rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl z-50 border border-[#A87BC9]/20">
+                            {item.title}
+                          </div>
+                        )}
+                      </>
                     )}
                   </NavLink>
                 ))}
               </div>
             )}
 
-            {/* ── Recursos ────────────────────────────────────────── */}
+            {/* Recursos */}
             {visibleResources.length > 0 && (
-              <div className="pt-4 pb-2">
+              <div className="pt-4 pb-1 mt-2">
+                <div className="mx-0 mb-3 h-px bg-gradient-to-r from-transparent via-[#A87BC9]/30 to-transparent" />
                 {!isCollapsed && (
-                  <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <p className="px-3 text-[10px] font-bold text-[#A87BC9]/70 uppercase tracking-widest mb-2">
                     Recursos
                   </p>
                 )}
@@ -192,19 +244,27 @@ export default function Sidebar() {
                     to={item.path}
                     onClick={() => setIsMobileOpen(false)}
                     className={({ isActive }) => cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group relative",
-                      isActive 
-                        ? "bg-primary text-primary-foreground shadow-sm" 
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative",
+                      isActive
+                        ? "bg-[#5E2A84] text-[#F8EFE2] shadow-md shadow-[#2B1B33]/40"
+                        : "text-[#A87BC9] hover:bg-[#5E2A84]/50 hover:text-[#F8EFE2]",
                       isCollapsed && "justify-center px-0"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5 shrink-0", isCollapsed ? "h-6 w-6" : "")} />
-                    {!isCollapsed && <span className="font-medium">{item.title}</span>}
-                    {isCollapsed && (
-                      <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md z-50">
-                        {item.title}
-                      </div>
+                    {({ isActive }) => (
+                      <>
+                        <item.icon className={cn(
+                          "shrink-0",
+                          isCollapsed ? "h-6 w-6" : "h-5 w-5",
+                          isActive ? "text-[#E8CFA3]" : ""
+                        )} />
+                        {!isCollapsed && <span className="font-medium text-sm">{item.title}</span>}
+                        {isCollapsed && (
+                          <div className="absolute left-full ml-3 px-2 py-1 bg-[#2B1B33] text-[#F8EFE2] rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl z-50 border border-[#A87BC9]/20">
+                            {item.title}
+                          </div>
+                        )}
+                      </>
                     )}
                   </NavLink>
                 ))}
@@ -212,12 +272,13 @@ export default function Sidebar() {
             )}
           </nav>
 
-          {/* Bottom Actions */}
-          <div className="px-3 pt-4 border-t space-y-1">
+          {/* ── Bottom Actions ────────────────────────────────── */}
+          <div className="px-3 pt-4 space-y-1">
+            <div className="mx-0 mb-3 h-px bg-gradient-to-r from-transparent via-[#A87BC9]/30 to-transparent" />
             <Button 
               variant="ghost" 
               className={cn(
-                "w-full justify-start gap-3 text-muted-foreground hover:text-destructive transition-colors",
+                "w-full justify-start gap-3 text-[#A87BC9] hover:text-[#F8EFE2] hover:bg-red-900/40 transition-colors",
                 isCollapsed && "justify-center px-0"
               )}
               onClick={() => {
@@ -226,11 +287,16 @@ export default function Sidebar() {
               }}
             >
               <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span>Sair</span>}
+              {!isCollapsed && <span className="text-sm font-medium">Sair</span>}
             </Button>
             
             {isCollapsed && (
-              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mx-auto hidden lg:flex mt-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="mx-auto hidden lg:flex mt-2 text-[#A87BC9] hover:text-[#F8EFE2] hover:bg-[#5E2A84]/50"
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
