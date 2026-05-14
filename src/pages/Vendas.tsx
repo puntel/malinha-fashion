@@ -2,16 +2,11 @@ import { useState, useMemo } from 'react';
 import { 
   Plus, 
   Search, 
-  ShoppingCart, 
   Trash2, 
   Loader2, 
   Filter,
-  MoreVertical,
-  Calendar,
-  User,
-  Tag,
   CreditCard,
-  DollarSign
+  Printer
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { Sale } from '@/lib/types';
+import { SaleReceipt, buildReceiptFromSale } from '@/components/SaleReceipt';
 
 export default function Vendas() {
   const { user, role, profile } = useAuth();
@@ -51,6 +47,7 @@ export default function Vendas() {
   const [search, setSearch] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
   
   // Form state
   const [form, setForm] = useState({
@@ -79,6 +76,17 @@ export default function Vendas() {
   });
 
   const lojaId = userData?.loja_id;
+
+  // Fetch loja details for receipt
+  const { data: lojaData } = useQuery({
+    queryKey: ['loja-details', lojaId],
+    queryFn: async () => {
+      if (!lojaId) return null;
+      const { data } = await supabase.from('lojas').select('name, phone, cnpj').eq('id', lojaId).single();
+      return data;
+    },
+    enabled: !!lojaId
+  });
 
   // Fetch clients for the dropdown
   const { data: clientes = [] } = useQuery({
@@ -243,9 +251,20 @@ export default function Vendas() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(sale.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        title="Imprimir recibo"
+                        onClick={() => setReceiptSale(sale)}
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(sale.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -347,6 +366,20 @@ export default function Vendas() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Sale Receipt Modal ─── */}
+      {receiptSale && (
+        <SaleReceipt
+          open={!!receiptSale}
+          onClose={() => setReceiptSale(null)}
+          data={buildReceiptFromSale({
+            sale: receiptSale,
+            storeName: lojaData?.name ?? profile?.full_name ?? 'Malinha Fashion',
+            storeCnpj: lojaData?.cnpj ?? undefined,
+            storePhone: lojaData?.phone ?? undefined,
+          })}
+        />
+      )}
     </div>
   );
 }

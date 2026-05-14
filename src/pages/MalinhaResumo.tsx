@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2,
-  Loader2, Pencil, Trash2, Plus, Camera, X, Mail, CreditCard
+  Loader2, Pencil, Trash2, Plus, Camera, X, Mail, CreditCard, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { MalinhaProduct } from '@/lib/types';
+import { SaleReceipt, buildReceiptFromMalinha } from '@/components/SaleReceipt';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -42,6 +43,7 @@ export default function MalinhaResumo() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [generatingPayment, setGeneratingPayment] = useState(false);
   const [paymentLink, setPaymentLink] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Client edit
   const [editClientOpen, setEditClientOpen] = useState(false);
@@ -76,6 +78,27 @@ export default function MalinhaResumo() {
     queryKey: ['malinha', id],
     queryFn: () => fetchMalinhaById(id || ''),
     enabled: !!id,
+  });
+
+  // Fetch loja details for the receipt
+  const { data: lojaData } = useQuery({
+    queryKey: ['malinha-loja', malinha?.vendedora_id],
+    queryFn: async () => {
+      if (!malinha?.vendedora_id) return null;
+      const { data: vendData } = await supabase
+        .from('vendedoras')
+        .select('loja_id')
+        .eq('user_id', malinha.vendedora_id)
+        .maybeSingle();
+      if (!vendData?.loja_id) return null;
+      const { data } = await supabase
+        .from('lojas')
+        .select('name, phone, cnpj')
+        .eq('id', vendData.loja_id)
+        .single();
+      return data;
+    },
+    enabled: !!malinha?.vendedora_id,
   });
 
   const invalidate = () => {
@@ -530,12 +553,22 @@ export default function MalinhaResumo() {
                 className="text-sm"
               />
             )}
-            {malinha.status === 'Pedido realizado' && (
-              <Button onClick={handleFinalize} className="w-full gap-2" size="lg" disabled={finalizing}>
-                {finalizing && <Loader2 className="h-4 w-4 animate-spin" />}
-                <CheckCircle2 className="h-5 w-5" /> Finalizar Malinha
-              </Button>
-            )}
+          {malinha.status === 'Pedido realizado' && (
+            <Button onClick={handleFinalize} className="w-full gap-2" size="lg" disabled={finalizing}>
+              {finalizing && <Loader2 className="h-4 w-4 animate-spin" />}
+              <CheckCircle2 className="h-5 w-5" /> Finalizar Malinha
+            </Button>
+          )}
+          {malinha.status === 'Finalizada' && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/30"
+              size="lg"
+              onClick={() => setShowReceipt(true)}
+            >
+              <Printer className="h-5 w-5" /> Imprimir Recibo de Venda
+            </Button>
+          )}
           </div>
         )}
 
@@ -682,6 +715,23 @@ export default function MalinhaResumo() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Sale Receipt Modal ─── */}
+      {showReceipt && malinha && (
+        <SaleReceipt
+          open={showReceipt}
+          onClose={() => setShowReceipt(false)}
+          data={buildReceiptFromMalinha({
+            malinha: {
+              ...malinha,
+              seller_name: malinha.seller_name,
+            },
+            storeName: lojaData?.name ?? malinha.seller_name ?? 'Malinha Fashion',
+            storeCnpj: lojaData?.cnpj ?? undefined,
+            storePhone: lojaData?.phone ?? undefined,
+          })}
+        />
+      )}
     </div>
   );
 }
