@@ -47,10 +47,94 @@ interface ClientesTabProps {
   canCreate: boolean;
 }
 
-const emptyForm = { name: '', phone: '', cpf: '', email: '', address: '', notes: '', vendedora_id: '', loja_id: '' };
+interface ClienteFormProps {
+  form: {
+    name: string;
+    phone: string;
+    cpf: string;
+    email: string;
+    address: string;
+    notes: string;
+    vendedora_id: string;
+    loja_id: string;
+  };
+  setForm: React.Dispatch<React.SetStateAction<{
+    name: string;
+    phone: string;
+    cpf: string;
+    email: string;
+    address: string;
+    notes: string;
+    vendedora_id: string;
+    loja_id: string;
+  }>>;
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  loading: boolean;
+  isEdit?: boolean;
+  needsVendedoraPicker?: boolean;
+  availableVendedoras?: AvailableVendedora[];
+  handleVendedoraChange?: (userId: string) => void;
+}
 
-const TEMPLATE_COLUMNS = ['Nome*', 'Telefone*', 'CPF', 'Email', 'Endereço', 'Observações'];
-const TEMPLATE_EXAMPLE = ['Maria Silva', '(11) 99999-9999', '000.000.000-00', 'maria@email.com', 'Rua das Flores, 123 - SP', 'Cliente preferencial'];
+function ClienteForm({
+  form,
+  setForm,
+  onSubmit,
+  loading,
+  isEdit = false,
+  needsVendedoraPicker = false,
+  availableVendedoras = [],
+  handleVendedoraChange,
+}: ClienteFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      {!isEdit && needsVendedoraPicker && handleVendedoraChange && (
+        <div className="space-y-1">
+          <Label>Vendedora <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+          <Select value={form.vendedora_id || '__none__'} onValueChange={handleVendedoraChange}>
+            <SelectTrigger><SelectValue placeholder="Selecione a vendedora (opcional)" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Sem vendedora —</SelectItem>
+              {availableVendedoras.map(v => (
+                <SelectItem key={v.user_id} value={v.user_id}>{v.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-1">
+        <Label>Nome *</Label>
+        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome completo" required />
+      </div>
+      <div className="space-y-1">
+        <Label>Telefone *</Label>
+        <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" required />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label>CPF <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+          <Input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} placeholder="000.000.000-00" />
+        </div>
+        <div className="space-y-1">
+          <Label>E-mail <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Endereço <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+        <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+      </div>
+      <div className="space-y-1">
+        <Label>Observações <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+        <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+        {isEdit ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+      </Button>
+    </form>
+  );
+}
 
 export default function ClientesTab({
   role,
@@ -291,94 +375,6 @@ export default function ClientesTab({
     );
   });
 
-interface ClienteFormProps {
-  form: {
-    name: string;
-    phone: string;
-    cpf: string;
-    email: string;
-    address: string;
-    notes: string;
-    vendedora_id: string;
-    loja_id: string;
-  };
-  setForm: React.Dispatch<React.SetStateAction<{
-    name: string;
-    phone: string;
-    cpf: string;
-    email: string;
-    address: string;
-    notes: string;
-    vendedora_id: string;
-    loja_id: string;
-  }>>;
-  onSubmit: (e: React.FormEvent) => Promise<void>;
-  loading: boolean;
-  isEdit?: boolean;
-  needsVendedoraPicker?: boolean;
-  availableVendedoras?: AvailableVendedora[];
-  handleVendedoraChange?: (userId: string) => void;
-}
-
-function ClienteForm({
-  form,
-  setForm,
-  onSubmit,
-  loading,
-  isEdit = false,
-  needsVendedoraPicker = false,
-  availableVendedoras = [],
-  handleVendedoraChange,
-}: ClienteFormProps) {
-  return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      {!isEdit && needsVendedoraPicker && handleVendedoraChange && (
-        <div className="space-y-1">
-          <Label>Vendedora <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-          <Select value={form.vendedora_id || '__none__'} onValueChange={handleVendedoraChange}>
-            <SelectTrigger><SelectValue placeholder="Selecione a vendedora (opcional)" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">— Sem vendedora —</SelectItem>
-              {availableVendedoras.map(v => (
-                <SelectItem key={v.user_id} value={v.user_id}>{v.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      <div className="space-y-1">
-        <Label>Nome *</Label>
-        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome completo" required />
-      </div>
-      <div className="space-y-1">
-        <Label>Telefone *</Label>
-        <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 00000-0000" required />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label>CPF <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-          <Input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} placeholder="000.000.000-00" />
-        </div>
-        <div className="space-y-1">
-          <Label>E-mail <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-        </div>
-      </div>
-      <div className="space-y-1">
-        <Label>Endereço <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-        <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-      </div>
-      <div className="space-y-1">
-        <Label>Observações <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-        <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-      </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        {isEdit ? 'Salvar Alterações' : 'Cadastrar Cliente'}
-      </Button>
-    </form>
-  );
-}
 
 
   return (

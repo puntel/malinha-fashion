@@ -27,6 +27,85 @@ const statusColors: Record<string, string> = {
 
 const emptyProductForm = { code: '', size: '', quantity: '1', price: '' };
 
+interface ProductFormProps {
+  form: typeof emptyProductForm;
+  setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
+  photoPreview: string;
+  photoInputId: string;
+  onPhotoChange: (f: File) => void;
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  saving: boolean;
+  isAdd?: boolean;
+}
+
+function ProductForm({
+  form,
+  setForm,
+  photoPreview,
+  photoInputId,
+  onPhotoChange,
+  onSubmit,
+  saving,
+  isAdd = false,
+}: ProductFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      {/* Photo */}
+      <div className="space-y-1">
+        <Label>Foto da peça</Label>
+        <div className="flex items-center gap-3">
+          {photoPreview ? (
+            <img src={photoPreview} alt="preview" className="h-16 w-16 rounded-lg object-cover bg-muted" />
+          ) : (
+            <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
+              <Camera className="h-6 w-6 text-muted-foreground" />
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => document.getElementById(photoInputId)?.click()}
+          >
+            {photoPreview ? 'Trocar foto' : 'Adicionar foto'}
+          </Button>
+          <input
+            id={photoInputId}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoChange(f); }}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label>Código *</Label>
+          <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="REF-001" required />
+        </div>
+        <div className="space-y-1">
+          <Label>Tamanho *</Label>
+          <Input value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} placeholder="M" required />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label>Quantidade *</Label>
+          <Input type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} required />
+        </div>
+        <div className="space-y-1">
+          <Label>Preço (R$) *</Label>
+          <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" required />
+        </div>
+      </div>
+      <Button type="submit" className="w-full" disabled={saving}>
+        {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+        {isAdd ? 'Adicionar Peça' : 'Salvar Alterações'}
+      </Button>
+    </form>
+  );
+}
+
 export default function MalinhaResumo() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -374,84 +453,6 @@ export default function MalinhaResumo() {
     }
   };
 
-interface ProductFormProps {
-  form: typeof emptyProductForm;
-  setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
-  photoPreview: string;
-  photoInputId: string;
-  onPhotoChange: (f: File) => void;
-  onSubmit: (e: React.FormEvent) => Promise<void>;
-  saving: boolean;
-  isAdd?: boolean;
-}
-
-function ProductForm({
-  form,
-  setForm,
-  photoPreview,
-  photoInputId,
-  onPhotoChange,
-  onSubmit,
-  saving,
-  isAdd = false,
-}: ProductFormProps) {
-  return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      {/* Photo */}
-      <div className="space-y-1">
-        <Label>Foto da peça</Label>
-        <div className="flex items-center gap-3">
-          {photoPreview ? (
-            <img src={photoPreview} alt="preview" className="h-16 w-16 rounded-lg object-cover bg-muted" />
-          ) : (
-            <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
-              <Camera className="h-6 w-6 text-muted-foreground" />
-            </div>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => document.getElementById(photoInputId)?.click()}
-          >
-            {photoPreview ? 'Trocar foto' : 'Adicionar foto'}
-          </Button>
-          <input
-            id={photoInputId}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onPhotoChange(f); }}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label>Código *</Label>
-          <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="REF-001" required />
-        </div>
-        <div className="space-y-1">
-          <Label>Tamanho *</Label>
-          <Input value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} placeholder="M" required />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label>Quantidade *</Label>
-          <Input type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Preço (R$) *</Label>
-          <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" required />
-        </div>
-      </div>
-      <Button type="submit" className="w-full" disabled={saving}>
-        {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        {isAdd ? 'Adicionar Peça' : 'Salvar Alterações'}
-      </Button>
-    </form>
-  );
-}
 
 
   return (
