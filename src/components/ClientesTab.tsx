@@ -47,6 +47,10 @@ interface ClientesTabProps {
   canCreate: boolean;
 }
 
+const emptyForm = { name: '', phone: '', cpf: '', email: '', address: '', notes: '', vendedora_id: '', loja_id: '' };
+const TEMPLATE_COLUMNS = ['Nome*', 'Telefone*', 'CPF', 'Email', 'Endereço', 'Observações'];
+const TEMPLATE_EXAMPLE = ['Maria Silva', '(11) 99999-9999', '000.000.000-00', 'maria@email.com', 'Rua das Flores, 123 - SP', 'Cliente preferencial'];
+
 interface ClienteFormProps {
   form: {
     name: string;
