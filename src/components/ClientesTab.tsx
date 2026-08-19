@@ -291,9 +291,48 @@ export default function ClientesTab({
     );
   });
 
-  const ClienteForm = ({ onSubmit, isEdit = false }: { onSubmit: (e: React.FormEvent) => Promise<void>; isEdit?: boolean }) => (
+interface ClienteFormProps {
+  form: {
+    name: string;
+    phone: string;
+    cpf: string;
+    email: string;
+    address: string;
+    notes: string;
+    vendedora_id: string;
+    loja_id: string;
+  };
+  setForm: React.Dispatch<React.SetStateAction<{
+    name: string;
+    phone: string;
+    cpf: string;
+    email: string;
+    address: string;
+    notes: string;
+    vendedora_id: string;
+    loja_id: string;
+  }>>;
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  loading: boolean;
+  isEdit?: boolean;
+  needsVendedoraPicker?: boolean;
+  availableVendedoras?: AvailableVendedora[];
+  handleVendedoraChange?: (userId: string) => void;
+}
+
+function ClienteForm({
+  form,
+  setForm,
+  onSubmit,
+  loading,
+  isEdit = false,
+  needsVendedoraPicker = false,
+  availableVendedoras = [],
+  handleVendedoraChange,
+}: ClienteFormProps) {
+  return (
     <form onSubmit={onSubmit} className="space-y-3">
-      {!isEdit && needsVendedoraPicker && (
+      {!isEdit && needsVendedoraPicker && handleVendedoraChange && (
         <div className="space-y-1">
           <Label>Vendedora <span className="text-muted-foreground text-xs">(opcional)</span></Label>
           <Select value={form.vendedora_id || '__none__'} onValueChange={handleVendedoraChange}>
@@ -339,6 +378,8 @@ export default function ClientesTab({
       </Button>
     </form>
   );
+}
+
 
   return (
     <div className="space-y-3">
@@ -454,7 +495,15 @@ export default function ClientesTab({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo Cliente</DialogTitle></DialogHeader>
-          <ClienteForm onSubmit={handleCreate} />
+          <ClienteForm
+            form={form}
+            setForm={setForm}
+            onSubmit={handleCreate}
+            loading={loading}
+            needsVendedoraPicker={needsVendedoraPicker}
+            availableVendedoras={availableVendedoras}
+            handleVendedoraChange={handleVendedoraChange}
+          />
         </DialogContent>
       </Dialog>
 
@@ -462,7 +511,13 @@ export default function ClientesTab({
       <Dialog open={!!editCliente} onOpenChange={open => { if (!open) setEditCliente(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Cliente</DialogTitle></DialogHeader>
-          <ClienteForm onSubmit={handleEdit} isEdit />
+          <ClienteForm
+            form={form}
+            setForm={setForm}
+            onSubmit={handleEdit}
+            loading={loading}
+            isEdit
+          />
         </DialogContent>
       </Dialog>
 

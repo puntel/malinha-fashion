@@ -374,23 +374,28 @@ export default function MalinhaResumo() {
     }
   };
 
-  const ProductForm = ({
-    form,
-    setForm,
-    photoPreview,
-    photoInputId,
-    onPhotoChange,
-    onSubmit,
-    isAdd = false,
-  }: {
-    form: typeof emptyProductForm;
-    setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
-    photoPreview: string;
-    photoInputId: string;
-    onPhotoChange: (f: File) => void;
-    onSubmit: (e: React.FormEvent) => Promise<void>;
-    isAdd?: boolean;
-  }) => (
+interface ProductFormProps {
+  form: typeof emptyProductForm;
+  setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
+  photoPreview: string;
+  photoInputId: string;
+  onPhotoChange: (f: File) => void;
+  onSubmit: (e: React.FormEvent) => Promise<void>;
+  saving: boolean;
+  isAdd?: boolean;
+}
+
+function ProductForm({
+  form,
+  setForm,
+  photoPreview,
+  photoInputId,
+  onPhotoChange,
+  onSubmit,
+  saving,
+  isAdd = false,
+}: ProductFormProps) {
+  return (
     <form onSubmit={onSubmit} className="space-y-3">
       {/* Photo */}
       <div className="space-y-1">
@@ -446,6 +451,8 @@ export default function MalinhaResumo() {
       </Button>
     </form>
   );
+}
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -680,6 +687,7 @@ export default function MalinhaResumo() {
             photoInputId="edit-product-photo"
             onPhotoChange={f => handlePhotoChange(f, setEditProductPhotoPreview, setEditProductPhotoFile)}
             onSubmit={handleSaveProduct}
+            saving={saving}
           />
         </DialogContent>
       </Dialog>
@@ -695,6 +703,7 @@ export default function MalinhaResumo() {
             photoInputId="add-product-photo"
             onPhotoChange={f => handlePhotoChange(f, setAddProductPhotoPreview, setAddProductPhotoFile)}
             onSubmit={handleAddProduct}
+            saving={saving}
             isAdd
           />
         </DialogContent>
