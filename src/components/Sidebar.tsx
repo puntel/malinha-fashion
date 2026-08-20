@@ -93,7 +93,6 @@ export default function Sidebar() {
             src={logoSrc}
             alt="BagSync"
             className="h-8 w-auto object-contain"
-            style={{ filter: 'brightness(0) invert(1)' }}
           />
         </div>
       </div>
@@ -127,7 +126,6 @@ export default function Sidebar() {
                   src={logoSrc}
                   alt="BagSync"
                   className="h-9 w-auto object-contain rounded-md"
-                  style={{ filter: 'brightness(0) invert(1)' }}
                 />
               </div>
             ) : (
@@ -137,7 +135,6 @@ export default function Sidebar() {
                   src={logoSrc}
                   alt="B"
                   className="h-7 w-7 object-contain"
-                  style={{ filter: 'brightness(0) invert(1)' }}
                 />
               </div>
             )}
