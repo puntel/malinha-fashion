@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Plus, ImagePlus, Trash2, Loader2, Palette } from 'lucide-react';
+import { ArrowLeft, Plus, ImagePlus, Trash2, Loader2, Palette, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createMalinha, addProducts, uploadProductPhoto } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ProductStatus } from '@/lib/types';
 
@@ -40,7 +42,7 @@ interface Variation {
 
 interface LocalProduct {
   tempId: string;
-  code: string;
+  code: string;  // stores the product name
   size: string;
   quantity: number;
   price: number;
@@ -56,7 +58,7 @@ function createVariation(): Variation {
 
 export default function NovaMalinhaProdutos() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, role } = useAuth();
   const [searchParams] = useSearchParams();
   const clientName = searchParams.get('name') || '';
   const clientCpf = searchParams.get('cpf') || '';
@@ -70,7 +72,8 @@ export default function NovaMalinhaProdutos() {
   const clientEmail = searchParams.get('email') || '';
 
   const [products, setProducts] = useState<LocalProduct[]>([]);
-  const [code, setCode] = useState('');
+  const [productName, setProductName] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [sizeCategory, setSizeCategory] = useState<keyof typeof SIZE_CATEGORIES>('Vestuário');
   const [size, setSize] = useState('');
   const [qty, setQty] = useState('1');
@@ -79,11 +82,48 @@ export default function NovaMalinhaProdutos() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Fetch loja_id for current user
+  const { data: userData } = useQuery({
+    queryKey: ['user-loja-nova-malinha', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      if (role === 'loja') {
+        const { data } = await supabase.from('lojas').select('id').eq('created_by', user.id).single();
+        return { loja_id: data?.id };
+      }
+      if (role === 'vendedora') {
+        const { data } = await supabase.from('vendedoras').select('loja_id').eq('user_id', user.id).single();
+        return { loja_id: data?.loja_id };
+      }
+      return { loja_id: null };
+    },
+    enabled: !!user
+  });
+
+  const lojaId = userData?.loja_id;
+
+  // Fetch catalog products for autocomplete
+  const { data: catalogProducts = [] } = useQuery({
+    queryKey: ['catalog-products-malinha', lojaId],
+    queryFn: async () => {
+      let query = supabase.from('products').select('id, name, unit_price, image_url').order('name');
+      if (lojaId) query = query.eq('loja_id', lojaId);
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: role === 'master' || !!lojaId
+  });
+
+  const filteredSuggestions = productName.trim().length >= 1
+    ? catalogProducts.filter(p => p.name.toLowerCase().includes(productName.toLowerCase()))
+    : catalogProducts;
 
   // Variações do produto sendo adicionado
   const [variations, setVariations] = useState<Variation[]>([createVariation()]);
 
-  const canAdd = code.trim() && size;
+  const canAdd = productName.trim() && size;
 
   // ── Gerenciar variações ────────────────────────────────────────────────────
   const addVariation = () => setVariations(prev => [...prev, createVariation()]);
@@ -100,7 +140,7 @@ export default function NovaMalinhaProdutos() {
     if (!canAdd) return;
     const product: LocalProduct = {
       tempId: crypto.randomUUID(),
-      code: code.trim().toUpperCase(),
+      code: productName.trim(),
       size,
       quantity: parseInt(qty) || 1,
       price: parseFloat(price.replace(',', '.')) || 0,
@@ -110,9 +150,10 @@ export default function NovaMalinhaProdutos() {
       variations: variations.filter(v => v.color || v.size),
     };
     setProducts(prev => [...prev, product]);
-    setCode(''); setSize(''); setQty('1'); setPrice('');
+    setProductName(''); setSize(''); setQty('1'); setPrice('');
     setPhotoPreview(null); setPhotoFile(null);
     setVariations([createVariation()]);
+    setShowSuggestions(false);
   };
 
   const handleRemove = (tempId: string) => {
@@ -205,9 +246,61 @@ export default function NovaMalinhaProdutos() {
 
         {/* ── Card de cadastro do produto ─────────────────────────────────── */}
         <div className="rounded-xl border bg-card p-4 space-y-4">
+          {/* Nome do produto com autocomplete */}
           <div className="space-y-2">
-            <Label>Código do produto</Label>
-            <Input placeholder="Ex: VT-001" value={code} onChange={e => setCode(e.target.value)} />
+            <Label>Nome do produto</Label>
+            <div className="relative" ref={autocompleteRef}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Ex: Camiseta Branca"
+                  value={productName}
+                  onChange={e => {
+                    setProductName(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  className="pl-9"
+                />
+              </div>
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div className="absolute z-50 top-full mt-1 left-0 right-0 rounded-lg border bg-card shadow-lg max-h-48 overflow-y-auto">
+                  {filteredSuggestions.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                      onMouseDown={() => {
+                        setProductName(p.name);
+                        if (p.unit_price && !price) setPrice(String(p.unit_price));
+                        if (p.image_url && !photoPreview) setPhotoPreview(p.image_url);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      {p.image_url ? (
+                        <img src={p.image_url} alt={p.name} className="h-8 w-8 rounded-md object-cover bg-muted shrink-0" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                          <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        {p.unit_price && (
+                          <p className="text-xs text-muted-foreground">R$ {Number(p.unit_price).toFixed(2).replace('.', ',')}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                  {productName.trim().length > 0 && !filteredSuggestions.some(p => p.name.toLowerCase() === productName.toLowerCase()) && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+                      💡 Produto não cadastrado — será salvo como texto livre
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Categoria de tamanho</Label>
