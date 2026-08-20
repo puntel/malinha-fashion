@@ -50,7 +50,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
+      <header className="hidden lg:block sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Vendedora</p>
@@ -61,6 +61,7 @@ export default function Dashboard() {
       </header>
 
       <main className="mx-auto max-w-lg px-4 pb-24 pt-4">
+        <h2 className="text-2xl font-bold text-foreground mb-6">Minhas Malinhas</h2>
         {isLoading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
         ) : malinhas.length === 0 ? (

@@ -78,16 +78,24 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Toggle */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleMobile}
-          className="bg-[#3D1A5C] text-[#F8EFE2] hover:bg-[#5E2A84] border border-[#A87BC9]/30 shadow-lg"
-        >
-          {isMobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </Button>
+      {/* Mobile Sticky Header Bar */}
+      <div className="lg:hidden sticky top-0 left-0 right-0 z-30 w-full bg-[#3D1A5C] text-[#F8EFE2] flex items-center justify-between px-4 py-3 border-b border-[#A87BC9]/20 shadow-md">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMobile}
+            className="text-[#A87BC9] hover:text-[#F8EFE2] hover:bg-[#5E2A84]/40 h-9 w-9"
+          >
+            {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+          <img
+            src={logoSrc}
+            alt="BagSync"
+            className="h-8 w-auto object-contain"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
+        </div>
       </div>
 
       {/* Sidebar Overlay (Mobile) */}

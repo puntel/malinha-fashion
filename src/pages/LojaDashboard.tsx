@@ -41,7 +41,7 @@ export default function LojaDashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
+      <header className="hidden lg:block sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Loja</p>
@@ -52,6 +52,7 @@ export default function LojaDashboard() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 pt-6">
+        <h2 className="text-2xl font-bold text-foreground mb-6">Minhas Malinhas</h2>
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
