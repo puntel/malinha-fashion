@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Copy, Check, MessageCircle, Share2, CheckCircle2,
-  Loader2, Pencil, Trash2, Plus, Camera, X, Mail, CreditCard, Printer
+  Loader2, Pencil, Trash2, Plus, Camera, X, Mail, CreditCard, Printer, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,13 @@ const statusColors: Record<string, string> = {
 
 const emptyProductForm = { code: '', size: '', quantity: '1', price: '' };
 
+interface CatalogProduct {
+  id: string;
+  name: string;
+  unit_price?: number;
+  image_url?: string;
+}
+
 interface ProductFormProps {
   form: typeof emptyProductForm;
   setForm: React.Dispatch<React.SetStateAction<typeof emptyProductForm>>;
@@ -36,6 +43,7 @@ interface ProductFormProps {
   onSubmit: (e: React.FormEvent) => Promise<void>;
   saving: boolean;
   isAdd?: boolean;
+  catalogProducts?: CatalogProduct[];
 }
 
 function ProductForm({
@@ -47,7 +55,14 @@ function ProductForm({
   onSubmit,
   saving,
   isAdd = false,
+  catalogProducts = [],
 }: ProductFormProps) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const filteredSuggestions = form.code.trim().length >= 1
+    ? catalogProducts.filter(p => p.name.toLowerCase().includes(form.code.toLowerCase()))
+    : catalogProducts;
+
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       {/* Photo */}
@@ -78,25 +93,80 @@ function ProductForm({
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label>Código *</Label>
-          <Input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="REF-001" required />
+
+      {/* Nome do produto com autocomplete */}
+      <div className="space-y-1">
+        <Label>Nome do produto *</Label>
+        <div className="relative">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={form.code}
+              onChange={e => {
+                setForm(f => ({ ...f, code: e.target.value }));
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="Ex: Camiseta Branca"
+              className="pl-9"
+              required
+            />
+          </div>
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <div className="absolute z-50 top-full mt-1 left-0 right-0 rounded-lg border bg-card shadow-lg max-h-48 overflow-y-auto">
+              {filteredSuggestions.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                  onMouseDown={() => {
+                    setForm(f => ({
+                      ...f,
+                      code: p.name,
+                      price: p.unit_price ? String(p.unit_price) : f.price,
+                    }));
+                    setShowSuggestions(false);
+                  }}
+                >
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-8 w-8 rounded-md object-cover bg-muted shrink-0" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                      <Camera className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{p.name}</p>
+                    {p.unit_price && (
+                      <p className="text-xs text-muted-foreground">R$ {Number(p.unit_price).toFixed(2).replace('.', ',')}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+              {form.code.trim().length > 0 && !filteredSuggestions.some(p => p.name.toLowerCase() === form.code.toLowerCase()) && (
+                <div className="px-3 py-2 text-xs text-muted-foreground border-t">
+                  💡 Produto não cadastrado — será salvo como texto livre
+                </div>
+              )}
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label>Tamanho *</Label>
           <Input value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} placeholder="M" required />
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label>Quantidade *</Label>
           <Input type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} required />
         </div>
-        <div className="space-y-1">
-          <Label>Preço (R$) *</Label>
-          <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" required />
-        </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Preço (R$) *</Label>
+        <Input type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0,00" required />
       </div>
       <Button type="submit" className="w-full" disabled={saving}>
         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -178,6 +248,32 @@ export default function MalinhaResumo() {
       return data;
     },
     enabled: !!malinha?.vendedora_id,
+  });
+
+  // Fetch catalog products for autocomplete in ProductForm
+  const { data: lojaForCatalog } = useQuery({
+    queryKey: ['malinha-loja-catalog-id', malinha?.vendedora_id],
+    queryFn: async () => {
+      if (!malinha?.vendedora_id) return null;
+      const { data: vendData } = await supabase
+        .from('vendedoras')
+        .select('loja_id')
+        .eq('user_id', malinha.vendedora_id)
+        .maybeSingle();
+      return vendData?.loja_id || null;
+    },
+    enabled: !!malinha?.vendedora_id,
+  });
+
+  const { data: catalogProducts = [] } = useQuery({
+    queryKey: ['catalog-products-resumo', lojaForCatalog],
+    queryFn: async () => {
+      let query = supabase.from('products').select('id, name, unit_price, image_url').order('name');
+      if (lojaForCatalog) query = query.eq('loja_id', lojaForCatalog);
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: !!malinha,
   });
 
   const invalidate = () => {
@@ -689,6 +785,7 @@ export default function MalinhaResumo() {
             onPhotoChange={f => handlePhotoChange(f, setEditProductPhotoPreview, setEditProductPhotoFile)}
             onSubmit={handleSaveProduct}
             saving={saving}
+            catalogProducts={catalogProducts}
           />
         </DialogContent>
       </Dialog>
@@ -706,6 +803,7 @@ export default function MalinhaResumo() {
             onSubmit={handleAddProduct}
             saving={saving}
             isAdd
+            catalogProducts={catalogProducts}
           />
         </DialogContent>
       </Dialog>
