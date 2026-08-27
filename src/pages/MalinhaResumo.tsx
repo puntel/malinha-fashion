@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { MalinhaProduct } from '@/lib/types';
 import { SaleReceipt, buildReceiptFromMalinha } from '@/components/SaleReceipt';
+import { formatCurrency } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -139,7 +140,7 @@ function ProductForm({
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{p.name}</p>
                     {p.unit_price && (
-                      <p className="text-xs text-muted-foreground">R$ {Number(p.unit_price).toFixed(2).replace('.', ',')}</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(p.unit_price)}</p>
                     )}
                   </div>
                 </button>
@@ -590,10 +591,10 @@ export default function MalinhaResumo() {
             {malinha.return_date && <p>🔄 Retorno: {new Date(malinha.return_date).toLocaleDateString('pt-BR')}</p>}
             <p>📦 {products.length} {products.length === 1 ? 'peça' : 'peças'}</p>
             <p className="text-foreground font-medium">
-              💰 Total: R$ {products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
+              💰 Total: {formatCurrency(products.reduce((sum, p) => sum + Number(p.price) * p.quantity, 0))}
             </p>
             <p className="text-success font-semibold">
-              ✅ Valor fechado: R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
+              ✅ Valor fechado: {formatCurrency(products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0))}
             </p>
           </div>
         </div>
@@ -614,7 +615,7 @@ export default function MalinhaResumo() {
                 <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{p.code}</p>
-                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
+                  <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · {formatCurrency(p.price)}</p>
                   {p.client_note && <p className="text-xs text-primary mt-1 italic">💬 "{p.client_note}"</p>}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

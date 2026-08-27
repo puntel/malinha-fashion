@@ -40,6 +40,7 @@ import {
 import { toast } from 'sonner';
 import type { Sale } from '@/lib/types';
 import { SaleReceipt, buildReceiptFromSale } from '@/components/SaleReceipt';
+import { formatCurrency } from '@/lib/utils';
 
 export default function Vendas() {
   const { user, role, profile } = useAuth();
@@ -242,7 +243,7 @@ export default function Vendas() {
                   </TableCell>
                   <TableCell className="text-right">{sale.quantity}</TableCell>
                   <TableCell className="text-right font-semibold text-success">
-                    R$ {(sale.value - (sale.discount || 0)).toFixed(2).replace('.', ',')}
+                    {formatCurrency(sale.value - (sale.discount || 0))}
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-muted font-medium">

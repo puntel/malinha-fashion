@@ -54,6 +54,7 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import type { InventoryProduct } from '@/lib/types';
 import { uploadProductPhoto } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 export default function Produtos() {
   const { user, role } = useAuth();
@@ -377,7 +378,7 @@ export default function Produtos() {
                       {product.quantity}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-medium">R$ {product.unit_price.toFixed(2).replace('.', ',')}</TableCell>
+                  <TableCell className="text-right font-medium">{formatCurrency(product.unit_price)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

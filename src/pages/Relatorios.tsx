@@ -46,6 +46,7 @@ import {
 } from 'recharts';
 import { format, subDays } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { formatCurrency } from '@/lib/utils';
 
 interface ReportSale {
   id: string;
@@ -404,7 +405,7 @@ export default function Relatorios() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {stats?.totalRevenue.toFixed(2).replace('.', ',')}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
               <span className="text-success inline-flex items-center"><ArrowUpRight className="h-2 w-2 mr-0.5" /> 12%</span> em relação ao mês anterior
             </p>
@@ -449,10 +450,10 @@ export default function Relatorios() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => `R$ ${val}`} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => formatCurrency(val)} />
               <Tooltip
                 contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
-                formatter={(val: number) => [`R$ ${val.toFixed(2).replace('.', ',')}`, 'Receita']}
+                formatter={(val: number) => [formatCurrency(val), 'Receita']}
               />
               <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
             </AreaChart>
@@ -492,7 +493,7 @@ export default function Relatorios() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold">{p.qty} un.</p>
-                      <p className="text-xs text-muted-foreground">R$ {p.revenue.toFixed(2).replace('.', ',')}</p>
+                      <p className="text-xs text-muted-foreground">{formatCurrency(p.revenue)}</p>
                     </div>
                   </div>
                 ))}
@@ -529,7 +530,7 @@ export default function Relatorios() {
                       <p className="text-sm font-medium truncate">{c.name}</p>
                       <p className="text-xs text-muted-foreground">{c.orders} {c.orders === 1 ? 'pedido' : 'pedidos'}</p>
                     </div>
-                    <p className="text-sm font-bold text-success shrink-0">R$ {c.total.toFixed(2).replace('.', ',')}</p>
+                    <p className="text-sm font-bold text-success shrink-0">{formatCurrency(c.total)}</p>
                   </div>
                 ))}
               </div>
@@ -597,7 +598,7 @@ export default function Relatorios() {
                     <td className="p-4 text-muted-foreground">{format(new Date(sale.created_at), 'dd/MM/yyyy')}</td>
                     <td className="p-4 font-medium">{sale.clientes?.name || 'Avulso'}</td>
                     <td className="p-4">{sale.product_name}</td>
-                    <td className="p-4 text-right font-semibold text-success">R$ {(sale.value - (sale.discount || 0)).toFixed(2).replace('.', ',')}</td>
+                    <td className="p-4 text-right font-semibold text-success">{formatCurrency(sale.value - (sale.discount || 0))}</td>
                   </tr>
                 ))}
                 {reportData?.sales.length === 0 && (

@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ProductStatus } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 const SIZE_CATEGORIES = {
   'Vestuário': ['PP', 'P', 'M', 'G', 'GG', 'XGG'],
@@ -288,7 +289,7 @@ export default function NovaMalinhaProdutos() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{p.name}</p>
                         {p.unit_price && (
-                          <p className="text-xs text-muted-foreground">R$ {Number(p.unit_price).toFixed(2).replace('.', ',')}</p>
+                          <p className="text-xs text-muted-foreground">{formatCurrency(p.unit_price)}</p>
                         )}
                       </div>
                     </button>
@@ -478,7 +479,7 @@ export default function NovaMalinhaProdutos() {
                     <img src={p.photo_url} alt={p.code} className="h-12 w-12 rounded-md object-cover bg-muted flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{p.code}</p>
-                      <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · R$ {p.price.toFixed(2).replace('.', ',')}</p>
+                      <p className="text-xs text-muted-foreground">Tam: {p.size} · Qtd: {p.quantity} · {formatCurrency(p.price)}</p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => handleRemove(p.tempId)} className="shrink-0 text-destructive">
                       <Trash2 className="h-4 w-4" />

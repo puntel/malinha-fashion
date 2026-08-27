@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { MalinhaProduct, ProductStatus, Malinha } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 export default function ClienteView() {
   const { id } = useParams();
@@ -166,7 +167,7 @@ export default function ClienteView() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground">{p.code}</p>
                   <p className="text-sm text-muted-foreground">Tamanho: {p.size}</p>
-                  <p className="text-sm font-medium text-foreground">R$ {Number(p.price).toFixed(2).replace('.', ',')}</p>
+                  <p className="text-sm font-medium text-foreground">{formatCurrency(p.price)}</p>
                   {p.client_note && <p className="text-xs text-primary mt-1 italic">"{p.client_note}"</p>}
                 </div>
               </div>
@@ -222,7 +223,7 @@ export default function ClienteView() {
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">Total selecionado:</span>
             <span className="font-display font-semibold text-foreground">
-              R$ {products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0).toFixed(2).replace('.', ',')}
+              {formatCurrency(products.filter(p => p.status === 'accepted' || p.status === 'edited').reduce((sum, p) => sum + Number(p.price) * p.quantity, 0))}
             </span>
           </div>
           <Button onClick={handleFinalize} className="w-full gap-2" size="lg" disabled={saving}>

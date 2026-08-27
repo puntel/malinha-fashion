@@ -3,6 +3,8 @@ import { Printer, X, ShoppingBag, Store, User, Calendar, CreditCard, Tag, Packag
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
+import { formatCurrency } from '@/lib/utils';
+
 export interface ReceiptProduct {
   code: string;
   description: string;
@@ -40,7 +42,7 @@ interface SaleReceiptProps {
 }
 
 function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return formatCurrency(value);
 }
 
 export function SaleReceipt({ open, onClose, data }: SaleReceiptProps) {
