@@ -80,6 +80,7 @@ export default function Vendedoras() {
           email: vendedoraForm.email,
           full_name: vendedoraForm.full_name,
           phone: vendedoraForm.phone,
+          password: vendedoraForm.password,
           owner_password: vendedoraForm.password,
           loja_id: finalLojaId
         } 

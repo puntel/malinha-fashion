@@ -14,6 +14,15 @@ import logoSrc from '@/assets/logo.png';
 // Inicializa o Stripe (Configure VITE_STRIPE_PUBLISHABLE_KEY no .env)
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_TYooMQauvdEDq54NiTphI7jx');
 
+/**
+ * Configuração de Pagamento no Cadastro:
+ * - false: Cadastro direto para fase de testes com usuários reais (somente cadastro de lojas/vendedoras).
+ * - true: Exige pagamento/assinatura via Stripe antes de finalizar a criação da loja.
+ * Mantém todas as configurações salvas. Para reativar, basta alterar para true
+ * ou definir VITE_ENABLE_REGISTRATION_PAYMENT=true no arquivo .env.
+ */
+const ENABLE_REGISTRATION_PAYMENT = import.meta.env.VITE_ENABLE_REGISTRATION_PAYMENT === 'true';
+
 function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -63,7 +72,6 @@ function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => v
         if (res.error) throw new Error(res.error.message);
         if (res.data?.error) throw new Error(res.data.error);
 
-        const tempPassword = res.data?.temporary_password || 'A1b2c3';
         toast.success(`Loja criada com sucesso! Você já pode fazer login.`);
         onSuccess();
       } catch (err: any) {
@@ -95,6 +103,7 @@ function CheckoutForm({ regForm, onSuccess }: { regForm: any, onSuccess: () => v
 function RegisterView({ goBack }: { goBack: () => void }) {
   const [clientSecret, setClientSecret] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [regForm, setRegForm] = useState({
     loja_name: '',
     loja_phone: '',
@@ -105,6 +114,9 @@ function RegisterView({ goBack }: { goBack: () => void }) {
   });
 
   useEffect(() => {
+    // Só inicializa o Stripe se a cobrança no cadastro estiver habilitada
+    if (!ENABLE_REGISTRATION_PAYMENT) return;
+
     // Cria um PaymentIntent assim que a tela de cadastro é aberta
     supabase.functions.invoke('create-payment-intent', {
       body: { email: 'nova_loja@exemplo.com', name: 'Nova Loja' }
@@ -128,6 +140,53 @@ function RegisterView({ goBack }: { goBack: () => void }) {
     });
   }, []);
 
+  const handleDirectRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!regForm.loja_name.trim()) {
+      toast.error('Informe o nome da loja.');
+      return;
+    }
+    if (!regForm.loja_cnpj.trim()) {
+      toast.error('Informe o CNPJ ou CPF.');
+      return;
+    }
+    if (!regForm.loja_phone.trim()) {
+      toast.error('Informe o telefone da loja.');
+      return;
+    }
+    if (!regForm.owner_name.trim()) {
+      toast.error('Informe o nome do proprietário.');
+      return;
+    }
+    if (!regForm.owner_email.trim()) {
+      toast.error('Informe o e-mail corporativo.');
+      return;
+    }
+    if (!regForm.owner_password || regForm.owner_password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const res = await supabase.functions.invoke('manage-users', { 
+        body: { action: 'create_loja', ...regForm } 
+      });
+
+      if (res.error) throw new Error(res.error.message);
+      if (res.data?.error) throw new Error(res.data.error);
+
+      toast.success('Loja cadastrada com sucesso! Você já pode fazer login.');
+      goBack();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao cadastrar loja. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
       <div className="flex items-center mb-6 relative justify-center">
@@ -137,7 +196,7 @@ function RegisterView({ goBack }: { goBack: () => void }) {
         <h2 className="text-xl font-bold text-primary">Criar Conta</h2>
       </div>
 
-      <div className="space-y-6">
+      <form onSubmit={ENABLE_REGISTRATION_PAYMENT ? (e) => e.preventDefault() : handleDirectRegister} className="space-y-6">
         <div className="space-y-3 bg-card p-5 rounded-2xl shadow-sm border border-border">
           <h3 className="font-semibold text-xs text-primary uppercase tracking-wider flex items-center gap-2"><Building className="w-4 h-4"/> Dados da Loja</h3>
           <Input value={regForm.loja_name} onChange={e => setRegForm(f => ({ ...f, loja_name: e.target.value }))} placeholder="Nome da Loja *" required className="bg-background border-border rounded-lg h-11" />
@@ -152,23 +211,40 @@ function RegisterView({ goBack }: { goBack: () => void }) {
           <Input type="password" value={regForm.owner_password} onChange={e => setRegForm(f => ({ ...f, owner_password: e.target.value }))} placeholder="Crie uma Senha Forte *" required minLength={6} className="bg-background border-border rounded-lg h-11" />
         </div>
 
-        {clientSecret ? (
-          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-            <CheckoutForm regForm={regForm} onSuccess={goBack} />
-          </Elements>
-        ) : paymentError ? (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center mt-6">
-            <h3 className="font-semibold text-destructive mb-2">Conexão Indisponível</h3>
-            <p className="text-sm text-destructive/80 mb-4">{paymentError}</p>
-            <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="border-destructive/30 text-destructive hover:bg-destructive/10">Tentar Novamente</Button>
-          </div>
+        {ENABLE_REGISTRATION_PAYMENT ? (
+          clientSecret ? (
+            <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+              <CheckoutForm regForm={regForm} onSuccess={goBack} />
+            </Elements>
+          ) : paymentError ? (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center mt-6">
+              <h3 className="font-semibold text-destructive mb-2">Conexão Indisponível</h3>
+              <p className="text-sm text-destructive/80 mb-4">{paymentError}</p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="border-destructive/30 text-destructive hover:bg-destructive/10">Tentar Novamente</Button>
+            </div>
+          ) : (
+            <div className="flex justify-center py-6 text-muted-foreground mt-6">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2 text-sm">Carregando módulo de pagamento...</span>
+            </div>
+          )
         ) : (
-          <div className="flex justify-center py-6 text-muted-foreground mt-6">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-2 text-sm">Carregando módulo de pagamento...</span>
-          </div>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full h-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold tracking-widest shadow-md transition-all text-base mt-2 uppercase"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Cadastrando Loja...
+              </>
+            ) : (
+              'Cadastrar Loja'
+            )}
+          </Button>
         )}
-      </div>
+      </form>
     </div>
   );
 }
