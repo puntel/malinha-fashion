@@ -65,7 +65,7 @@ export default function Login() {
   };
 
   if (!authLoading && user) {
-    return <Navigate to="/relatorios" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

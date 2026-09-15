@@ -318,7 +318,7 @@ export default function Index() {
   };
 
   if (!authLoading && user) {
-    return <Navigate to="/relatorios" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
