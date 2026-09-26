@@ -7,10 +7,10 @@
 
 ## ✅ PASSO 1 — Login ADM Master
 
-| Campo  | Valor |
-|--------|-------|
-| Email  | joaopuntel@gmail.com |
-| Senha  | SenhaMaster123! |
+| Campo  | Valor de Teste |
+|--------|----------------|
+| Email  | admin.ficticio@malinhastore.test |
+| Senha  | SenhaFicticia@2026 |
 
 - Acesse http://localhost:8082/
 - Informe as credenciais acima
