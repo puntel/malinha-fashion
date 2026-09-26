@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import type { MalinhaProduct } from '@/lib/types';
 import { SaleReceipt, buildReceiptFromMalinha } from '@/components/SaleReceipt';
 import { formatCurrency } from '@/lib/utils';
+import { escapeHtml } from '@/lib/html-sanitize';
 
 const statusColors: Record<string, string> = {
   'Enviada': 'bg-accent text-accent-foreground',
@@ -326,12 +327,12 @@ export default function MalinhaResumo() {
       const subject = `Sua Malinha BagSync está pronta! 🛍️`;
       const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
-          <h2 style="color: #8884d8;">Olá ${malinha.client_name}!</h2>
+          <h2 style="color: #8884d8;">Olá ${escapeHtml(malinha.client_name)}!</h2>
           <p>Sua malinha está pronta! Confira as peças que separei para você clicando no link abaixo:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${link}" style="background-color: #8884d8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Ver Minha Malinha</a>
+            <a href="${escapeHtml(link)}" style="background-color: #8884d8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Ver Minha Malinha</a>
           </div>
-          <p style="color: #666; font-size: 14px;">Se o botão não funcionar, copie e cole este link no seu navegador:<br><a href="${link}">${link}</a></p>
+          <p style="color: #666; font-size: 14px;">Se o botão não funcionar, copie e cole este link no seu navegador:<br><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 12px; color: #999;">Enviado via BagSync</p>
         </div>

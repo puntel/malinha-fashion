@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 import { formatCurrency } from '@/lib/utils';
+import { escapeHtml } from '@/lib/html-sanitize';
 
 export interface ReceiptProduct {
   code: string;
@@ -68,7 +69,7 @@ export function SaleReceipt({ open, onClose, data }: SaleReceiptProps) {
       <html lang="pt-BR">
       <head>
         <meta charset="UTF-8" />
-        <title>Recibo – ${data.storeName}</title>
+        <title>Recibo – ${escapeHtml(data.storeName)}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body {
