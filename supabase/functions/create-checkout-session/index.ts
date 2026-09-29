@@ -59,6 +59,20 @@ serve(async (req: Request) => {
       throw new Error("Nenhuma peça aceita para gerar cobrança.");
     }
 
+    // Sanitize photo_url to prevent SSRF against internal/cloud metadata networks
+    const isSafeImageUrl = (urlStr: string | null | undefined): boolean => {
+      if (!urlStr) return false;
+      try {
+        const u = new URL(urlStr);
+        if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+        const h = u.hostname.toLowerCase();
+        if (h === "localhost" || h === "127.0.0.1" || h === "169.254.169.254" || h.startsWith("10.") || h.startsWith("192.168.") || h.startsWith("172.")) return false;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     // Create line items for Stripe
     const lineItems = productsToCharge.map((p: any) => ({
       price_data: {
@@ -66,15 +80,27 @@ serve(async (req: Request) => {
         product_data: {
           name: `Ref: ${p.code}`,
           description: `Tamanho: ${p.size}`,
-          images: p.photo_url ? [p.photo_url] : [],
+          images: isSafeImageUrl(p.photo_url) ? [p.photo_url] : [],
         },
         unit_amount: Math.round(Number(p.price) * 100), // Stripe uses cents
       },
       quantity: p.quantity,
     }));
 
-    // Create Checkout Session
-    const origin = req.headers.get("origin") || "http://localhost:8080";
+    // Create Checkout Session (with Origin header validation against SSRF / Open Redirect)
+    let origin = "http://localhost:8080";
+    const rawOrigin = req.headers.get("origin");
+    if (rawOrigin) {
+      try {
+        const parsedOrigin = new URL(rawOrigin);
+        const host = parsedOrigin.hostname.toLowerCase();
+        if (host !== "169.254.169.254" && !host.startsWith("10.") && !host.startsWith("192.168.") && !host.startsWith("172.")) {
+          origin = parsedOrigin.origin;
+        }
+      } catch {
+        // fallback to default origin
+      }
+    }
     
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'boleto'],
