@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
 
     const user = users?.find((u: { email?: string }) => u.email?.toLowerCase() === email.toLowerCase().trim());
     if (!user) {
-      return new Response(JSON.stringify({ error: "E-mail não cadastrado no sistema." }), {
-        status: 404,
+      return new Response(JSON.stringify({ error: "Credenciais inválidas ou conta não encontrada." }), {
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
